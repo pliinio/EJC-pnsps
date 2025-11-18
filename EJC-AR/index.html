@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>RA - Encontro de Jovens</title>
+
+  <style>
+    body, html {
+      margin: 0; padding: 0; overflow: hidden;
+      background: #000;
+      font-family: Arial, sans-serif;
+    }
+    #legend {
+      position: fixed;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      color: white;
+      font-size: 1.3em;
+      text-shadow: 0 0 5px black;
+      pointer-events: none;
+      z-index: 10;
+    }
+  </style>
+
+  <!-- IMPORT MAP (Three + MindAR) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+    }
+  }
+  </script>
+</head>
+
+<body>
+  <!-- Legenda -->
+  <div id="legend"></div>
+
+  <!-- Código RA -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { Raycaster, Vector2 } from 'three';
+
+    const MindAR = await import("mindar-image-three");
+
+    const legend = document.getElementById("legend");
+    const showLegend = text => legend.innerText = text;
+    const hideLegend = () => legend.innerText = "";
+
+    document.addEventListener("DOMContentLoaded", async () => {
+
+      // Inicialização
+      const mindarThree = new MindAR.MINDAR.IMAGE.MindARThree({
+        container: document.body,
+        imageTargetSrc: "targets.mind",    // Certifique-se de que está no mesmo diretório!
+      });
+
+      const { renderer, scene, camera } = mindarThree;
+
+      // Anchors
+      const altarAnchor = mindarThree.addAnchor(0);
+      const bookAnchor = mindarThree.addAnchor(1);
+      const spotifyAnchor = mindarThree.addAnchor(2);
+
+      const loader = new GLTFLoader();
+
+      // ========= MODELOS =========
+      // Altar
+      const altarGroup = new THREE.Group();
+      altarAnchor.group.add(altarGroup);
+
+      loader.load("./assets/models/altar.glb", gltf => {
+        const obj = gltf.scene;
+        obj.scale.set(0.4, 0.4, 0.4);
+        obj.traverse(o => o.userData.click = "altar");
+        altarGroup.add(obj);
+      });
+
+      // Livro
+      const bookGroup = new THREE.Group();
+      bookAnchor.group.add(bookGroup);
+
+      loader.load("./assets/models/livro.glb", gltf => {
+        const obj = gltf.scene;
+        obj.scale.set(0.5, 0.5, 0.5);
+        obj.traverse(o => o.userData.click = "book");
+        bookGroup.add(obj);
+      });
+
+      // Spotify (ícone simples)
+      const spotifyGroup = new THREE.Group();
+      spotifyAnchor.group.add(spotifyGroup);
+
+      const planeGeo = new THREE.PlaneGeometry(0.6, 0.6);
+      const planeMat = new THREE.MeshBasicMaterial({color: 0x1DB954});
+      const spotifyIcon = new THREE.Mesh(planeGeo, planeMat);
+      spotifyIcon.userData.click = "spotify";
+      spotifyGroup.add(spotifyIcon);
+
+      // ========= EVENTOS DE DETECÇÃO =========
+      altarAnchor.onTargetFound = () => showLegend("Clique para meditar");
+      altarAnchor.onTargetLost  = hideLegend;
+
+      bookAnchor.onTargetFound = () => showLegend("Clique para abrir o livro de orações");
+      bookAnchor.onTargetLost  = hideLegend;
+
+      spotifyAnchor.onTargetFound = () => showLegend("Ouça a playlist no Spotify");
+      spotifyAnchor.onTargetLost  = hideLegend;
+
+      // ========= INTERAÇÃO COM CLIQUE =========
+      const raycaster = new Raycaster();
+      const mouse = new Vector2();
+
+      renderer.domElement.addEventListener("click", ev => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObjects(scene.children, true);
+
+        if (hits.length === 0) return;
+
+        const hit = hits[0].object.userData.click;
+
+        if (hit === "altar") {
+          altarGroup.scale.set(2, 2, 2);
+          bookGroup.visible = false;
+          spotifyGroup.visible = false;
+          showLegend("Meditando...");
+        }
+
+        if (hit === "book") {
+          window.location.href = "./oracoes.html"; // Troque pelo seu arquivo
+        }
+
+        if (hit === "spotify") {
+          window.location.href = "https://open.spotify.com/playlist/XXXX"; // SUA playlist
+        }
+      });
+
+      // ========= INÍCIO =========
+      await mindarThree.start();
+      renderer.setAnimationLoop(() => renderer.render(scene, camera));
+    });
+  </script>
+</body>
+</html>

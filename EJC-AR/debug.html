@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - RA Retiro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #000;
+            color: white;
+            padding: 20px;
+        }
+        #debug-info {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid gold;
+        }
+        .log {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success { border-left: 5px solid #4CAF50; }
+        .error { border-left: 5px solid #f44336; }
+        .warning { border-left: 5px solid #ff9800; }
+        .info { border-left: 5px solid #2196F3; }
+        
+        #camera-container {
+            width: 100%;
+            height: 60vh;
+            border: 2px solid #333;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .btn {
+            background: gold;
+            color: #8B4513;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        #test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug - Problema da Tela Azul</h1>
+    
+    <div id="debug-info">
+        <h3>Informações de Diagnóstico:</h3>
+        <div id="logs"></div>
+    </div>
+
+    <div>
+        <button class="btn" onclick="testStepByStep()">Teste Passo a Passo</button>
+        <button class="btn" onclick="testCameraAccess()">Testar Câmera</button>
+        <button class="btn" onclick="testMindFile()">Testar Arquivo .mind</button>
+        <button class="btn" onclick="testSimpleAR()">Teste AR Simples</button>
+        <button class="btn" onclick="clearLogs()">Limpar Logs</button>
+    </div>
+
+    <div id="camera-container">
+        <!-- A cena será injetada aqui durante os testes -->
+    </div>
+
+    <div id="test-results">
+        <h4>Resultados dos Testes:</h4>
+        <div id="results"></div>
+    </div>
+
+    <!-- Carregar bibliotecas -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
+
+    <script>
+        let logsElement = document.getElementById('logs');
+        let resultsElement = document.getElementById('results');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logsElement.appendChild(logEntry);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function result(message, type = 'info') {
+            const resultEntry = document.createElement('div');
+            resultEntry.className = `log ${type}`;
+            resultEntry.textContent = message;
+            resultsElement.appendChild(resultEntry);
+        }
+        
+        function clearLogs() {
+            logsElement.innerHTML = '';
+            resultsElement.innerHTML = '';
+        }
+        
+        // TESTE 1: Acesso à câmera
+        async function testCameraAccess() {
+            log('📷 Testando acesso à câmera...');
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                log('✅ Acesso à câmera concedido!', 'success');
+                result('✅ Câmera funcionando corretamente', 'success');
+                
+                // Mostrar preview
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.autoplay = true;
+                video.playsInline = true;
+                video.style.width = '100%';
+                video.style.height = '100%';
+                
+                const container = document.getElementById('camera-container');
+                container.innerHTML = '<h3>Preview da Câmera:</h3>';
+                container.appendChild(video);
+                
+                // Parar após 5 segundos
+                setTimeout(() => {
+                    stream.getTracks().forEach(track => track.stop());
+                    log('Teste de câmera concluído', 'info');
+                }, 5000);
+                
+            } catch (error) {
+                log(`❌ Erro na câmera: ${error.message}`, 'error');
+                result(`❌ Câmera bloqueada: ${error.message}`, 'error');
+                
+                if (error.name === 'NotAllowedError') {
+                    result('💡 Solução: Permita o acesso à câmera no navegador', 'warning');
+                } else if (error.name === 'NotFoundError') {
+                    result('💡 Solução: Nenhuma câmera encontrada', 'warning');
+                }
+            }
+        }
+        
+        // TESTE 2: Arquivo .mind
+        async function testMindFile() {
+            log('📁 Testando arquivo targets.mind...');
+            
+            try {
+                const response = await fetch('./targets/targets.mind');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const blob = await response.blob();
+                const sizeKB = (blob.size / 1024).toFixed(2);
+                
+                log(`✅ Arquivo .mind encontrado! Tamanho: ${sizeKB} KB`, 'success');
+                result(`✅ Arquivo .mind carregado (${sizeKB} KB)`, 'success');
+                
+                if (blob.size < 100) {
+                    log('⚠️ Arquivo .mind muito pequeno - pode estar corrompido', 'warning');
+                    result('⚠️ Arquivo .mind muito pequeno - gere novamente', 'warning');
+                }
+                
+                // Tentar ler como texto para verificar formato
+                const text = await blob.text();
+                log(`📝 Primeiros chars: ${text.substring(0, 100)}`, 'info');
+                
+            } catch (error) {
+                log(`❌ Erro no arquivo .mind: ${error.message}`, 'error');
+                result(`❌ Arquivo .mind não encontrado: ${error.message}`, 'error');
+                result('💡 Verifique: targets/targets.mind existe?', 'warning');
+            }
+        }
+        
+        // TESTE 3: AR Simples (sem modelos)
+        function testSimpleAR() {
+            log('🎯 Testando AR básico...');
+            
+            const container = document.getElementById('camera-container');
+            container.innerHTML = '';
+            
+            const sceneHtml = `
+                <a-scene 
+                    mindar-image="
+                        imageTargetSrc: url('./targets/targets.mind'); 
+                        autoStart: true; 
+                        maxTrack: 1; 
+                        uiScanning: yes; 
+                        uiLoading: yes;
+                    " 
+                    embedded 
+                    vr-mode-ui="enabled: false"
+                    renderer="colorManagement: true; precision: medium;">
+                    
+                    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+                    
+                    <a-entity mindar-image-target="targetIndex: 0">
+                        <a-box 
+                            color="red" 
+                            position="0 0.5 0" 
+                            scale="0.3 0.3 0.3"
+                            animation="property: rotation; to: 360 360 360; loop: true; dur: 3000">
+                        </a-box>
+                        <a-text 
+                            value="TESTE RA" 
+                            position="0 1 0" 
+                            align="center"
+                            color="white"
+                            scale="2 2 2">
+                        </a-text>
+                    </a-entity>
+                </a-scene>
+            `;
+            
+            container.innerHTML = '<h3>Teste AR Básico:</h3>' + sceneHtml;
+            
+            const scene = container.querySelector('a-scene');
+            
+            scene.addEventListener('loaded', () => {
+                log('✅ Cena AR carregada', 'success');
+                result('✅ Cena AR inicializada', 'success');
+            });
+            
+            scene.addEventListener('arReady', () => {
+                log('🎉 MINDAR PRONTO! Sistema funcionando!', 'success');
+                result('🎉 SISTEMA RA FUNCIONANDO!', 'success');
+            });
+            
+            scene.addEventListener('arError', (evt) => {
+                log(`❌ Erro MindAR: ${evt.detail}`, 'error');
+                result(`❌ MindAR erro: ${evt.detail}`, 'error');
+            });
+            
+            // Monitorar detecção
+            setTimeout(() => {
+                const target = scene.querySelector('[mindar-image-target]');
+                if (target) {
+                    target.addEventListener('targetFound', () => {
+                        log('🎯 MARCADOR DETECTADO!', 'success');
+                        result('🎯 MARCADOR ESTÁ SENDO DETECTADO!', 'success');
+                    });
+                    
+                    target.addEventListener('targetLost', () => {
+                        log('👻 Marcador perdido', 'warning');
+                    });
+                }
+            }, 1000);
+        }
+        
+        // TESTE 4: Passo a passo completo
+        async function testStepByStep() {
+            clearLogs();
+            log('🔍 Iniciando diagnóstico completo...');
+            
+            // 1. Testar câmera
+            await testCameraAccess();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // 2. Testar arquivo .mind
+            await testMindFile();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // 3. Testar AR simples
+            testSimpleAR();
+            
+            log('✅ Diagnóstico completo concluído', 'success');
+        }
+        
+        // TESTE 5: Versão funcional completa
+        function startWorkingVersion() {
+            const container = document.getElementById('camera-container');
+            container.innerHTML = '';
+            
+            const workingHtml = `
+                <a-scene 
+                    mindar-image="
+                        imageTargetSrc: url('./targets/targets.mind'); 
+                        autoStart: true; 
+                        maxTrack: 1; 
+                        uiScanning: yes; 
+                        uiLoading: yes;
+                    " 
+                    embedded 
+                    vr-mode-ui="enabled: false">
+                    
+                    <a-assets>
+                        <a-asset-item id="altar-model" src="./assets/models/altar-compressed.glb"></a-asset-item>
+                        <a-asset-item id="livro-model" src="./assets/models/livro-compressed.glb"></a-asset-item>
+                        <img id="spotify-texture" src="./assets/images/spotify-icon.png">
+                    </a-assets>
+
+                    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+                    <a-entity mindar-image-target="targetIndex: 0">
+                        <!-- Altar -->
+                        <a-entity 
+                            gltf-model="#altar-model" 
+                            position="0 0.5 0" 
+                            scale="0.8 0.8 0.8" 
+                            rotation="0 180 0">
+                        </a-entity>
+
+                        <!-- Livro -->
+                        <a-entity 
+                            gltf-model="#livro-model"
+                            position="1.2 0.3 0"
+                            scale="0.15 0.15 0.15"
+                            rotation="0 30 0"
+                            class="clickable"
+                            onclick="window.location.href='prayers.html'">
+                            
+                            <a-text value="Orações" position="0 0.9 0" align="center" color="gold"></a-text>
+                        </a-entity>
+
+                        <!-- Spotify -->
+                        <a-entity 
+                            position="-1.2 0.3 0"
+                            class="clickable"
+                            onclick="window.open('https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI', '_blank')">
+                            
+                            <a-cylinder radius="0.35" height="0.05" color="#1DB954"></a-cylinder>
+                            <a-plane position="0 0 0.026" width="0.6" height="0.6" src="#spotify-texture"></a-plane>
+                            <a-text value="Spotify" position="0 -0.5 0" align="center" color="white"></a-text>
+                        </a-entity>
+                    </a-entity>
+                </a-scene>
+            `;
+            
+            container.innerHTML = '<h3>Versão Funcional Completa:</h3>' + workingHtml;
+            log('🚀 Versão completa iniciada', 'success');
+        }
+
+        // Iniciar testes automáticos
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Página de debug carregada', 'info');
+            log(`Navegador: ${navigator.userAgent.split(' ')[0]}`, 'info');
+            log(`HTTPS: ${window.location.protocol === 'https:'}`, 'info');
+            log(`Localhost: ${window.location.hostname === 'localhost'}`, 'info');
+            
+            // Verificar requisitos
+            if (window.location.hostname !== 'localhost' && window.location.protocol !== 'https:') {
+                log('⚠️ AVISO: Use localhost ou HTTPS para câmera', 'warning');
+                result('❌ USE: python -m http.server 8000', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
