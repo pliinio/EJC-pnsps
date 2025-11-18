@@ -106,19 +106,6 @@
       text-decoration: none;
       display: inline-block;
     }
-
-    .debug-panel {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 12px;
-      z-index: 100;
-      max-width: 300px;
-    }
   </style>
 
   <!-- CARREGAMENTO TRADICIONAL - SEM MÓDULOS -->
@@ -136,16 +123,20 @@
 
   <div id="container"></div>
   <div id="legend"></div>
-  <div class="debug-panel" id="debug"></div>
 
   <div class="fallback" id="fallback">
-    <h2>🎵 Retiro Espiritual</h2>
-    <p>A experiência de RA está com problemas temporários.</p>
-    <div style="margin: 20px 0;">
-      <a href="prayers.html" class="btn">📖 Ver Orações</a>
+    <h2>🎵 Retiro Espiritual - Experiência Digital</h2>
+    <p>A funcionalidade de RA está temporariamente indisponível.</p>
+    <p><strong>Todo o conteúdo espiritual está disponível abaixo:</strong></p>
+    
+    <div style="margin: 30px 0;">
+      <a href="prayers.html" class="btn">📖 Ver Todas as Orações</a>
       <a href="https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI" class="btn" target="_blank">🎵 Playlist Spotify</a>
     </div>
-    <button class="btn" onclick="location.reload()">🔄 Tentar Novamente</button>
+    
+    <p style="color: #ccc; margin-top: 20px;">
+      <em>"A oração é o encontro da sede de Deus com a nossa sede"</em>
+    </p>
   </div>
 
   <script>
@@ -160,11 +151,9 @@
       const container = document.getElementById('container');
       const legend = document.getElementById('legend');
       const fallback = document.getElementById('fallback');
-      const debug = document.getElementById('debug');
 
       function updateStatus(text) {
         status.textContent = text;
-        debug.textContent = text;
         console.log(text);
       }
 
@@ -217,7 +206,7 @@
 
         updateStatus('✅ Arquivos verificados - Iniciando MindAR...');
 
-        // INICIALIZAR MINDAR - ESTA É A PARTE DA RA!
+        // INICIALIZAR MINDAR
         const mindarThree = new MindARThree({
           container: container,
           imageTargetSrc: "./targets.mind",
@@ -229,26 +218,13 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
-        renderer.domElement.style.position = 'absolute';
-        renderer.domElement.style.top = '0';
-        renderer.domElement.style.left = '0';
-
-        // ========= ILUMINAÇÃO =========
-        // Luz ambiente para iluminar tudo
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-        scene.add(ambientLight);
-
-        // Luz direcional principal
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(2, 5, 3);
-        scene.add(directionalLight);
 
         updateStatus('✅ MindAR configurado - Carregando modelos...');
 
         // LOADER
         const loader = new GLTFLoader();
 
-        // ANCHOR PRINCIPAL - ONDE OS MODELOS APARECERÃO QUANDO O MARCADOR FOR DETECTADO
+        // ANCHOR PRINCIPAL
         const anchor = mindarThree.addAnchor(0);
         
         // GRUPO PARA OS MODELOS
@@ -264,24 +240,17 @@
           console.log(`✅ ${name} carregado`);
           
           if (modelsLoaded === totalModels) {
-            updateStatus('✅ Todos os modelos carregados! Aponte a câmera para o marcador.');
+            updateStatus('✅ Todos os modelos carregados!');
           }
         }
 
-        // ========= ALTAR =========
+        // CARREGAR ALTAR
         loader.load(
           './assets/models/altar-compressed.glb',
           function(gltf) {
             const model = gltf.scene;
-            
-            // ESCALA BEM MENOR
-            model.scale.set(0.1, 0.1, 0.1);
-            
-            // POSIÇÃO: centro, mas mais para trás
-            model.position.set(0, 0, -0.3);
-            
-            // ROTAÇÃO para ficar de frente
-            model.rotation.set(0, Math.PI, 0);
+            model.scale.set(0.4, 0.4, 0.4);
+            model.position.set(0, 0, 0);
             
             // Tornar clicável
             model.traverse(function(child) {
@@ -294,27 +263,23 @@
             modelsGroup.add(model);
             onModelLoaded('Altar');
           },
-          null,
+          function(progress) {
+            // Progresso opcional
+          },
           function(error) {
             console.error('❌ Erro ao carregar altar:', error);
             onModelLoaded('Altar (com erro)');
           }
         );
 
-        // ========= LIVRO =========
+        // CARREGAR LIVRO
         loader.load(
           './assets/models/livro-compressed.glb',
           function(gltf) {
             const model = gltf.scene;
-            
-            // ESCALA BEM MENOR
-            model.scale.set(0.05, 0.05, 0.05);
-            
-            // POSIÇÃO: direita do altar, bem separado
-            model.position.set(0.8, 0, 0);
-            
-            // ROTAÇÃO para ficar visível
-            model.rotation.set(0, -Math.PI/3, 0);
+            model.scale.set(0.5, 0.5, 0.5);
+            model.position.set(1.5, 0.3, 0); // Direita do altar
+            model.rotation.set(0, Math.PI / 4, 0);
             
             model.traverse(function(child) {
               if (child.isMesh) {
@@ -333,39 +298,33 @@
           }
         );
 
-        // ========= SPOTIFY =========
-        // Botão do Spotify mais visível e bem posicionado
-        const spotifyGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.02, 32);
+        // BOTÃO SPOTIFY
+        const spotifyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.05, 32);
         const spotifyMaterial = new THREE.MeshBasicMaterial({ 
           color: 0x1DB954,
           transparent: true,
           opacity: 0.9
         });
         const spotifyButton = new THREE.Mesh(spotifyGeometry, spotifyMaterial);
-        
-        // POSIÇÃO: esquerda do altar, bem separado
-        spotifyButton.position.set(-0.8, 0, 0);
+        spotifyButton.position.set(-1.5, 0.3, 0); // Esquerda do altar
         spotifyButton.rotation.set(Math.PI / 2, 0, 0);
         spotifyButton.userData.clickable = true;
         spotifyButton.userData.type = 'spotify';
-        
         modelsGroup.add(spotifyButton);
         onModelLoaded('Spotify');
 
-        // ========= EVENTOS =========
+        // EVENTOS
         anchor.onTargetFound = function() {
           legend.textContent = "Marcador detectado! Clique nos objetos para interagir.";
-          console.log('🎯 Marcador encontrado - Modelos devem estar visíveis');
-          updateStatus('🎯 Marcador detectado!');
+          console.log('🎯 Marcador encontrado');
         };
 
         anchor.onTargetLost = function() {
           legend.textContent = "";
           console.log('👻 Marcador perdido');
-          updateStatus('Aguardando marcador...');
         };
 
-        // ========= SISTEMA DE CLIQUE =========
+        // SISTEMA DE CLIQUE
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -397,17 +356,15 @@
             const type = clickedObject.userData.type;
             
             console.log(`Clicou em: ${type}`);
-            updateStatus(`Clicou em: ${type}`);
             
             switch(type) {
               case 'altar':
                 legend.textContent = "✨ Meditando no altar...";
-                // Efeito visual de pulsação
+                // Efeito visual
                 if (clickedObject.parent) {
-                  const originalScale = clickedObject.parent.scale.clone();
-                  clickedObject.parent.scale.multiplyScalar(1.1);
+                  clickedObject.parent.scale.set(0.45, 0.45, 0.45);
                   setTimeout(function() {
-                    clickedObject.parent.scale.copy(originalScale);
+                    clickedObject.parent.scale.set(0.4, 0.4, 0.4);
                   }, 300);
                 }
                 break;
@@ -431,7 +388,7 @@
 
         updateStatus('✅ Configuração completa - Iniciando câmera...');
 
-        // INICIAR MINDAR - ESTA É A PARTE QUE INICIA A RA!
+        // INICIAR MINDAR
         await mindarThree.start();
         
         updateStatus('✅ RA Pronta! Aponte para o marcador.');
@@ -441,7 +398,7 @@
           loading.style.display = 'none';
         }, 2000);
 
-        // LOOP DE RENDERIZAÇÃO - ESTA É A PARTE QUE MANTÉM A RA FUNCIONANDO!
+        // LOOP DE RENDERIZAÇÃO
         renderer.setAnimationLoop(function() {
           renderer.render(scene, camera);
         });
@@ -467,7 +424,7 @@
         document.getElementById('fallback').style.display = 'flex';
         loading.style.display = 'none';
       }
-    }, 15000);
+    }, 10000);
   </script>
 </body>
 </html>
