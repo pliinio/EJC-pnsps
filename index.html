@@ -106,6 +106,19 @@
       text-decoration: none;
       display: inline-block;
     }
+
+    .debug-panel {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      z-index: 100;
+      max-width: 300px;
+    }
   </style>
 
   <!-- CARREGAMENTO TRADICIONAL - SEM MÓDULOS -->
@@ -123,20 +136,16 @@
 
   <div id="container"></div>
   <div id="legend"></div>
+  <div class="debug-panel" id="debug"></div>
 
   <div class="fallback" id="fallback">
-    <h2>🎵 Retiro Espiritual - Experiência Digital</h2>
-    <p>A funcionalidade de RA está temporariamente indisponível.</p>
-    <p><strong>Todo o conteúdo espiritual está disponível abaixo:</strong></p>
-    
-    <div style="margin: 30px 0;">
-      <a href="prayers.html" class="btn">📖 Ver Todas as Orações</a>
+    <h2>🎵 Retiro Espiritual</h2>
+    <p>A experiência de RA está com problemas temporários.</p>
+    <div style="margin: 20px 0;">
+      <a href="prayers.html" class="btn">📖 Ver Orações</a>
       <a href="https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI" class="btn" target="_blank">🎵 Playlist Spotify</a>
     </div>
-    
-    <p style="color: #ccc; margin-top: 20px;">
-      <em>"A oração é o encontro da sede de Deus com a nossa sede"</em>
-    </p>
+    <button class="btn" onclick="location.reload()">🔄 Tentar Novamente</button>
   </div>
 
   <script>
@@ -151,9 +160,11 @@
       const container = document.getElementById('container');
       const legend = document.getElementById('legend');
       const fallback = document.getElementById('fallback');
+      const debug = document.getElementById('debug');
 
       function updateStatus(text) {
         status.textContent = text;
+        debug.textContent = text;
         console.log(text);
       }
 
@@ -206,7 +217,7 @@
 
         updateStatus('✅ Arquivos verificados - Iniciando MindAR...');
 
-        // INICIALIZAR MINDAR
+        // INICIALIZAR MINDAR - ESTA É A PARTE DA RA!
         const mindarThree = new MindARThree({
           container: container,
           imageTargetSrc: "./targets.mind",
@@ -218,28 +229,26 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
+        renderer.domElement.style.position = 'absolute';
+        renderer.domElement.style.top = '0';
+        renderer.domElement.style.left = '0';
 
         // ========= ILUMINAÇÃO =========
-        // Luz ambiente suave
+        // Luz ambiente para iluminar tudo
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
 
         // Luz direcional principal
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(5, 10, 7);
+        directionalLight.position.set(2, 5, 3);
         scene.add(directionalLight);
-
-        // Luz direcional de preenchimento
-        const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        fillLight.position.set(-5, 5, 5);
-        scene.add(fillLight);
 
         updateStatus('✅ MindAR configurado - Carregando modelos...');
 
         // LOADER
         const loader = new GLTFLoader();
 
-        // ANCHOR PRINCIPAL
+        // ANCHOR PRINCIPAL - ONDE OS MODELOS APARECERÃO QUANDO O MARCADOR FOR DETECTADO
         const anchor = mindarThree.addAnchor(0);
         
         // GRUPO PARA OS MODELOS
@@ -255,7 +264,7 @@
           console.log(`✅ ${name} carregado`);
           
           if (modelsLoaded === totalModels) {
-            updateStatus('✅ Todos os modelos carregados!');
+            updateStatus('✅ Todos os modelos carregados! Aponte a câmera para o marcador.');
           }
         }
 
@@ -266,10 +275,10 @@
             const model = gltf.scene;
             
             // ESCALA BEM MENOR
-            model.scale.set(0.15, 0.15, 0.15);
+            model.scale.set(0.1, 0.1, 0.1);
             
             // POSIÇÃO: centro, mas mais para trás
-            model.position.set(0, -0.2, -0.5);
+            model.position.set(0, 0, -0.3);
             
             // ROTAÇÃO para ficar de frente
             model.rotation.set(0, Math.PI, 0);
@@ -279,25 +288,13 @@
               if (child.isMesh) {
                 child.userData.clickable = true;
                 child.userData.type = 'altar';
-                
-                // Melhorar materiais para iluminação
-                if (child.material) {
-                  child.material = child.material.clone();
-                  if (child.material.emissive) {
-                    child.material.emissive.set(0x333333);
-                  }
-                }
               }
             });
             
             modelsGroup.add(model);
             onModelLoaded('Altar');
-            
-            console.log('Altar posicionado:', model.position);
           },
-          function(progress) {
-            // Progresso opcional
-          },
+          null,
           function(error) {
             console.error('❌ Erro ao carregar altar:', error);
             onModelLoaded('Altar (com erro)');
@@ -311,10 +308,10 @@
             const model = gltf.scene;
             
             // ESCALA BEM MENOR
-            model.scale.set(0.08, 0.08, 0.08);
+            model.scale.set(0.05, 0.05, 0.05);
             
-            // POSIÇÃO: direita do altar, mais separado
-            model.position.set(1.0, -0.1, 0);
+            // POSIÇÃO: direita do altar, bem separado
+            model.position.set(0.8, 0, 0);
             
             // ROTAÇÃO para ficar visível
             model.rotation.set(0, -Math.PI/3, 0);
@@ -323,21 +320,11 @@
               if (child.isMesh) {
                 child.userData.clickable = true;
                 child.userData.type = 'book';
-                
-                // Melhorar materiais
-                if (child.material) {
-                  child.material = child.material.clone();
-                  if (child.material.emissive) {
-                    child.material.emissive.set(0x222222);
-                  }
-                }
               }
             });
             
             modelsGroup.add(model);
             onModelLoaded('Livro');
-            
-            console.log('Livro posicionado:', model.position);
           },
           null,
           function(error) {
@@ -348,77 +335,34 @@
 
         // ========= SPOTIFY =========
         // Botão do Spotify mais visível e bem posicionado
-        const spotifyGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.02, 32);
-        const spotifyMaterial = new THREE.MeshPhongMaterial({ 
+        const spotifyGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.02, 32);
+        const spotifyMaterial = new THREE.MeshBasicMaterial({ 
           color: 0x1DB954,
-          shininess: 30,
           transparent: true,
           opacity: 0.9
         });
         const spotifyButton = new THREE.Mesh(spotifyGeometry, spotifyMaterial);
         
-        // POSIÇÃO: esquerda do altar, mais separado
-        spotifyButton.position.set(-1.0, -0.1, 0);
+        // POSIÇÃO: esquerda do altar, bem separado
+        spotifyButton.position.set(-0.8, 0, 0);
         spotifyButton.rotation.set(Math.PI / 2, 0, 0);
         spotifyButton.userData.clickable = true;
         spotifyButton.userData.type = 'spotify';
         
-        // Adicionar ícone do Spotify (plano branco)
-        const iconGeometry = new THREE.PlaneGeometry(0.2, 0.2);
-        const iconMaterial = new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.9
-        });
-        const spotifyIcon = new THREE.Mesh(iconGeometry, iconMaterial);
-        spotifyIcon.position.set(0, 0, 0.015);
-        spotifyIcon.rotation.set(0, 0, 0);
-        spotifyButton.add(spotifyIcon);
-        
         modelsGroup.add(spotifyButton);
         onModelLoaded('Spotify');
-        
-        console.log('Spotify posicionado:', spotifyButton.position);
-
-        // ========= TEXTOS 3D =========
-        // Adicionar textos descritivos sobre cada objeto
-        const fontLoader = new THREE.FontLoader();
-        
-        // Texto para o livro
-        const bookTextGeometry = new THREE.PlaneGeometry(0.8, 0.2);
-        const bookTextMaterial = new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: 0.8
-        });
-        const bookText = new THREE.Mesh(bookTextGeometry, bookTextMaterial);
-        bookText.position.set(1.0, 0.3, 0);
-        bookText.rotation.set(-Math.PI/2, 0, 0);
-        modelsGroup.add(bookText);
-
-        // Texto para o Spotify
-        const spotifyTextGeometry = new THREE.PlaneGeometry(0.8, 0.2);
-        const spotifyTextMaterial = new THREE.MeshBasicMaterial({
-          color: 0xffffff,
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: 0.8
-        });
-        const spotifyText = new THREE.Mesh(spotifyTextGeometry, spotifyTextMaterial);
-        spotifyText.position.set(-1.0, 0.3, 0);
-        spotifyText.rotation.set(-Math.PI/2, 0, 0);
-        modelsGroup.add(spotifyText);
 
         // ========= EVENTOS =========
         anchor.onTargetFound = function() {
           legend.textContent = "Marcador detectado! Clique nos objetos para interagir.";
           console.log('🎯 Marcador encontrado - Modelos devem estar visíveis');
+          updateStatus('🎯 Marcador detectado!');
         };
 
         anchor.onTargetLost = function() {
           legend.textContent = "";
           console.log('👻 Marcador perdido');
+          updateStatus('Aguardando marcador...');
         };
 
         // ========= SISTEMA DE CLIQUE =========
@@ -453,6 +397,7 @@
             const type = clickedObject.userData.type;
             
             console.log(`Clicou em: ${type}`);
+            updateStatus(`Clicou em: ${type}`);
             
             switch(type) {
               case 'altar':
@@ -460,7 +405,7 @@
                 // Efeito visual de pulsação
                 if (clickedObject.parent) {
                   const originalScale = clickedObject.parent.scale.clone();
-                  clickedObject.parent.scale.multiplyScalar(1.2);
+                  clickedObject.parent.scale.multiplyScalar(1.1);
                   setTimeout(function() {
                     clickedObject.parent.scale.copy(originalScale);
                   }, 300);
@@ -486,7 +431,7 @@
 
         updateStatus('✅ Configuração completa - Iniciando câmera...');
 
-        // INICIAR MINDAR
+        // INICIAR MINDAR - ESTA É A PARTE QUE INICIA A RA!
         await mindarThree.start();
         
         updateStatus('✅ RA Pronta! Aponte para o marcador.');
@@ -496,7 +441,7 @@
           loading.style.display = 'none';
         }, 2000);
 
-        // LOOP DE RENDERIZAÇÃO
+        // LOOP DE RENDERIZAÇÃO - ESTA É A PARTE QUE MANTÉM A RA FUNCIONANDO!
         renderer.setAnimationLoop(function() {
           renderer.render(scene, camera);
         });
@@ -522,7 +467,7 @@
         document.getElementById('fallback').style.display = 'flex';
         loading.style.display = 'none';
       }
-    }, 10000);
+    }, 15000);
   </script>
 </body>
 </html>
