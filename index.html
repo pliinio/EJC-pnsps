@@ -86,6 +86,38 @@
       border-radius: 5px;
       font-size: 12px;
       z-index: 100;
+      max-width: 300px;
+      word-break: break-all;
+    }
+    
+    .fallback {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      color: white;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+      z-index: 2000;
+    }
+    
+    .fallback-btn {
+      background: gold;
+      color: #8B4513;
+      border: none;
+      padding: 15px 30px;
+      margin: 10px;
+      border-radius: 25px;
+      font-size: 1.1em;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
     }
   </style>
 
@@ -112,6 +144,17 @@
   <div id="legend"></div>
   <div class="debug-info" id="debug"></div>
 
+  <div class="fallback" id="fallback">
+    <h2>⚠️ Problema com a Realidade Aumentada</h2>
+    <p>Não foi possível carregar a experiência de RA.</p>
+    <p>Você pode acessar o conteúdo diretamente:</p>
+    <div style="margin: 20px 0;">
+      <a href="prayers.html" class="fallback-btn">📖 Ver Orações</a>
+      <a href="https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI" class="fallback-btn" target="_blank">🎵 Spotify</a>
+    </div>
+    <button class="fallback-btn" onclick="location.reload()">🔄 Tentar Novamente</button>
+  </div>
+
   <script type="module">
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -124,6 +167,7 @@
     const status = document.getElementById("status");
     const debug = document.getElementById("debug");
     const container = document.getElementById("container");
+    const fallback = document.getElementById("fallback");
 
     const showLegend = text => legend.innerText = text;
     const hideLegend = () => legend.innerText = "";
@@ -136,16 +180,51 @@
     let scene = null;
     let camera = null;
     let altarAnchor = null;
-    let bookAnchor = null;
-    let spotifyAnchor = null;
 
     // Modelos
     let altarModel = null;
     let bookModel = null;
     let spotifyModel = null;
+    let modelsLoaded = 0;
+    const totalModels = 3; // altar, livro, spotify
+
+    // Função para mostrar fallback
+    function showFallback(reason) {
+      loading.style.display = 'none';
+      fallback.style.display = 'flex';
+      console.error("Fallback acionado:", reason);
+    }
+
+    // Testar se os arquivos existem
+    async function testAssets() {
+      updateStatus("Verificando arquivos...");
+      
+      const assets = [
+        { url: './targets.mind', name: 'targets.mind' },
+        { url: './assets/models/altar-compressed.glb', name: 'altar-compressed.glb' },
+        { url: './assets/models/livro-compressed.glb', name: 'livro-compressed.glb' }
+      ];
+
+      for (const asset of assets) {
+        try {
+          const response = await fetch(asset.url, { method: 'HEAD' });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          updateDebug(`✅ ${asset.name} encontrado`);
+        } catch (error) {
+          updateDebug(`❌ ${asset.name} não encontrado`);
+          showFallback(`Arquivo ${asset.name} não encontrado`);
+          return false;
+        }
+      }
+      return true;
+    }
 
     document.addEventListener("DOMContentLoaded", async () => {
       try {
+        // Primeiro testar se os arquivos existem
+        const assetsOk = await testAssets();
+        if (!assetsOk) return;
+
         updateStatus("Configurando MindAR...");
         
         // Inicialização do MindAR
@@ -156,7 +235,7 @@
 
         ({ renderer, scene, camera } = mindarThree);
 
-        // Configurar renderer para ocupar tela toda
+        // Configurar renderer
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
@@ -169,25 +248,32 @@
         // Loader
         const loader = new GLTFLoader();
 
-        // ========= ANCHORS =========
-        // IMPORTANTE: Use apenas 1 anchor se seu .mind tem apenas 1 target
+        // ========= ANCHOR PRINCIPAL =========
         altarAnchor = mindarThree.addAnchor(0);
         
-        // Se você tiver múltiplos targets no .mind, descomente:
-        // bookAnchor = mindarThree.addAnchor(1);
-        // spotifyAnchor = mindarThree.addAnchor(2);
+        // Grupo para organizar os modelos
+        const modelsGroup = new THREE.Group();
+        altarAnchor.group.add(modelsGroup);
 
-        // ========= CARREGAR MODELOS =========
-        
-        // Altar
+        // Função chamada quando um modelo carrega
+        function onModelLoaded() {
+          modelsLoaded++;
+          updateDebug(`Modelos carregados: ${modelsLoaded}/${totalModels}`);
+          updateStatus(`Carregando... (${modelsLoaded}/${totalModels})`);
+          
+          if (modelsLoaded === totalModels) {
+            updateStatus("Todos os modelos carregados!");
+          }
+        }
+
+        // ========= CARREGAR ALTAR =========
         loader.load("./assets/models/altar-compressed.glb", 
           (gltf) => {
             altarModel = gltf.scene;
             altarModel.scale.set(0.4, 0.4, 0.4);
             altarModel.position.set(0, 0, 0);
-            altarModel.rotation.set(0, 0, 0);
             
-            // Adicionar dados de clique
+            // Configurar para clique
             altarModel.traverse((child) => {
               if (child.isMesh) {
                 child.userData.clickable = true;
@@ -195,26 +281,26 @@
               }
             });
             
-            altarAnchor.group.add(altarModel);
-            updateDebug("✅ Altar carregado");
+            modelsGroup.add(altarModel);
+            onModelLoaded();
           },
           (progress) => {
-            // Progresso do carregamento
             const percent = (progress.loaded / progress.total * 100).toFixed(1);
-            updateDebug(`Carregando altar: ${percent}%`);
+            updateDebug(`Altar: ${percent}%`);
           },
           (error) => {
-            console.error("❌ Erro ao carregar altar:", error);
+            console.error("Erro no altar:", error);
             updateDebug("❌ Erro no altar");
+            onModelLoaded(); // Contabilizar mesmo com erro
           }
         );
 
-        // Livro
+        // ========= CARREGAR LIVRO =========
         loader.load("./assets/models/livro-compressed.glb", 
           (gltf) => {
             bookModel = gltf.scene;
             bookModel.scale.set(0.5, 0.5, 0.5);
-            bookModel.position.set(1.5, 0, 0); // Posição relativa ao altar
+            bookModel.position.set(1.5, 0.3, 0); // Direita do altar
             bookModel.rotation.set(0, Math.PI / 4, 0);
             
             bookModel.traverse((child) => {
@@ -224,56 +310,63 @@
               }
             });
             
-            altarAnchor.group.add(bookModel); // Adiciona ao mesmo anchor
-            updateDebug("✅ Livro carregado");
+            modelsGroup.add(bookModel);
+            onModelLoaded();
           },
-          null,
+          (progress) => {
+            const percent = (progress.loaded / progress.total * 100).toFixed(1);
+            updateDebug(`Livro: ${percent}%`);
+          },
           (error) => {
-            console.error("❌ Erro ao carregar livro:", error);
+            console.error("Erro no livro:", error);
             updateDebug("❌ Erro no livro");
+            onModelLoaded();
           }
         );
 
-        // Spotify (criar objeto simples)
-        const spotifyGeometry = new THREE.PlaneGeometry(0.6, 0.6);
-        const spotifyMaterial = new THREE.MeshBasicMaterial({ 
-          color: 0x1DB954,
-          transparent: true,
-          opacity: 0.9
-        });
-        
-        spotifyModel = new THREE.Mesh(spotifyGeometry, spotifyMaterial);
-        spotifyModel.position.set(-1.5, 0, 0); // Posição relativa ao altar
-        spotifyModel.rotation.set(0, 0, 0);
-        spotifyModel.userData.clickable = true;
-        spotifyModel.userData.type = "spotify";
-        
-        // Adicionar texto
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = 256;
-        canvas.height = 256;
-        
-        context.fillStyle = '#1DB954';
-        context.fillRect(0, 0, 256, 256);
-        
-        context.fillStyle = 'white';
-        context.font = 'bold 40px Arial';
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        context.fillText('🎵', 128, 128);
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        spotifyMaterial.map = texture;
-        spotifyMaterial.needsUpdate = true;
-        
-        altarAnchor.group.add(spotifyModel);
-        updateDebug("✅ Spotify criado");
+        // ========= CRIAR BOTÃO SPOTIFY =========
+        setTimeout(() => {
+          try {
+            const spotifyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.05, 32);
+            const spotifyMaterial = new THREE.MeshBasicMaterial({ 
+              color: 0x1DB954,
+              transparent: true,
+              opacity: 0.9
+            });
+            
+            spotifyModel = new THREE.Mesh(spotifyGeometry, spotifyMaterial);
+            spotifyModel.position.set(-1.5, 0.3, 0); // Esquerda do altar
+            spotifyModel.rotation.set(Math.PI / 2, 0, 0);
+            spotifyModel.userData.clickable = true;
+            spotifyModel.userData.type = "spotify";
+            
+            // Adicionar ícone do Spotify
+            const iconGeometry = new THREE.PlaneGeometry(0.4, 0.4);
+            const iconMaterial = new THREE.MeshBasicMaterial({
+              color: 0xffffff,
+              transparent: true,
+              opacity: 0.9
+            });
+            
+            const spotifyIcon = new THREE.Mesh(iconGeometry, iconMaterial);
+            spotifyIcon.position.set(0, 0, 0.03);
+            spotifyIcon.rotation.set(0, 0, 0);
+            spotifyModel.add(spotifyIcon);
+            
+            modelsGroup.add(spotifyModel);
+            updateDebug("✅ Spotify criado");
+            onModelLoaded();
+          } catch (error) {
+            console.error("Erro no Spotify:", error);
+            updateDebug("❌ Erro no Spotify");
+            onModelLoaded();
+          }
+        }, 100);
 
         // ========= EVENTOS =========
         altarAnchor.onTargetFound = () => {
           showLegend("Marcador detectado! Clique nos objetos para interagir");
-          updateDebug("🎯 Target encontrado");
+          updateDebug("🎯 Target encontrado - Modelos devem estar visíveis");
         };
         
         altarAnchor.onTargetLost = () => {
@@ -284,22 +377,13 @@
         // ========= SISTEMA DE CLIQUE =========
         const raycaster = new Raycaster();
         const mouse = new Vector2();
-        let clickableObjects = [];
 
-        // Coletar objetos clicáveis
-        const collectClickableObjects = () => {
-          clickableObjects = [];
-          scene.traverse((object) => {
-            if (object.userData.clickable) {
-              clickableObjects.push(object);
-            }
-          });
-          updateDebug(`Objetos clicáveis: ${clickableObjects.length}`);
-        };
-
-        // Evento de clique
         renderer.domElement.addEventListener("click", (ev) => {
-          if (!altarAnchor.target.visible) return; // Só clicar se o target estiver visível
+          // Só processar clique se o target estiver visível
+          if (!altarAnchor.target || !altarAnchor.target.visible) {
+            updateDebug("Clique ignorado - target não visível");
+            return;
+          }
           
           const rect = renderer.domElement.getBoundingClientRect();
           mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
@@ -307,8 +391,13 @@
 
           raycaster.setFromCamera(mouse, camera);
           
-          // Coletar objetos clicáveis antes do raycast
-          collectClickableObjects();
+          // Coletar todos os objetos clicáveis da cena
+          const clickableObjects = [];
+          scene.traverse((object) => {
+            if (object.userData.clickable) {
+              clickableObjects.push(object);
+            }
+          });
           
           const intersects = raycaster.intersectObjects(clickableObjects, true);
 
@@ -321,60 +410,86 @@
             switch(type) {
               case "altar":
                 showLegend("✨ Meditando no altar...");
-                // Efeito visual
-                altarModel.scale.set(0.45, 0.45, 0.45);
-                setTimeout(() => {
-                  altarModel.scale.set(0.4, 0.4, 0.4);
-                }, 300);
+                // Efeito visual de feedback
+                if (altarModel) {
+                  altarModel.scale.set(0.45, 0.45, 0.45);
+                  setTimeout(() => {
+                    altarModel.scale.set(0.4, 0.4, 0.4);
+                  }, 300);
+                }
                 break;
                 
               case "book":
                 showLegend("📖 Abrindo orações...");
                 setTimeout(() => {
                   window.location.href = "./prayers.html";
-                }, 1000);
+                }, 800);
                 break;
                 
               case "spotify":
                 showLegend("🎵 Abrindo Spotify...");
                 setTimeout(() => {
                   window.open("https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI", "_blank");
-                }, 1000);
+                }, 800);
                 break;
             }
+          } else {
+            updateDebug("Clique na cena, mas não em objeto interativo");
           }
         });
 
         // ========= INICIAR MINDAR =========
-        updateStatus("Iniciando câmera...");
+        updateStatus("Iniciando câmera e detecção...");
         
-        await mindarThree.start();
-        
-        updateStatus("RA Pronta! Aponte para o marcador...");
-        
-        // Esconder loading após 2 segundos
-        setTimeout(() => {
-          loading.style.display = 'none';
-        }, 2000);
+        try {
+          await mindarThree.start();
+          updateStatus("RA Pronta! Aponte para o marcador...");
+          updateDebug("MindAR iniciado - aguardando marcador...");
+          
+          // Esconder loading após 3 segundos (ou quando os modelos carregarem)
+          setTimeout(() => {
+            if (loading.style.display !== 'none') {
+              loading.style.display = 'none';
+              updateDebug("Loading escondido por timeout");
+            }
+          }, 5000);
+          
+        } catch (error) {
+          console.error("Erro ao iniciar MindAR:", error);
+          updateStatus(`Erro: ${error.message}`);
+          showFallback("Não foi possível iniciar a câmera");
+          return;
+        }
 
         // Loop de renderização
         renderer.setAnimationLoop(() => {
           renderer.render(scene, camera);
         });
 
-        // ========= RESIZE HANDLER =========
+        // Redimensionamento
         window.addEventListener('resize', () => {
-          camera.aspect = window.innerWidth / window.innerHeight;
-          camera.updateProjectionMatrix();
-          renderer.setSize(window.innerWidth, window.innerHeight);
+          if (camera) {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+          }
+          if (renderer) {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+          }
         });
 
       } catch (error) {
-        console.error("❌ Erro fatal:", error);
-        updateStatus(`Erro: ${error.message}`);
-        updateDebug("Verifique o console para detalhes");
+        console.error("❌ Erro fatal na inicialização:", error);
+        updateStatus(`Erro crítico: ${error.message}`);
+        showFallback("Erro na inicialização da RA");
       }
     });
+
+    // Timeout global de segurança
+    setTimeout(() => {
+      if (loading.style.display !== 'none') {
+        showFallback("Tempo limite excedido no carregamento");
+      }
+    }, 15000);
   </script>
 </body>
 </html>
