@@ -6,112 +6,44 @@
   <title>RA - Encontro de Jovens</title>
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body, html {
-      margin: 0; 
-      padding: 0; 
-      overflow: hidden;
-      background: #000;
-      font-family: Arial, sans-serif;
-      width: 100vw;
-      height: 100vh;
+      margin: 0; padding: 0; overflow: hidden;
+      background: #000; font-family: Arial, sans-serif;
+      width: 100vw; height: 100vh;
     }
-    
-    #container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-    
+    #container { position: fixed; top:0; left:0; width:100%; height:100%; }
     #loading {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      font-size: 1.2em;
-      text-align: center;
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background:#000; color:#fff; display:flex; flex-direction:column;
+      justify-content:center; align-items:center; z-index:1000; font-size:1.1em; text-align:center;
     }
-    
     .spinner {
-      border: 4px solid #333;
-      border-top: 4px solid gold;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 1s linear infinite;
-      margin: 20px;
+      border:4px solid #333; border-top:4px solid gold; border-radius:50%;
+      width:50px; height:50px; animation:spin 1s linear infinite; margin:20px;
     }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
+    @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
     #legend {
-      position: fixed;
-      bottom: 20px;
-      left: 0;
-      width: 100%;
-      text-align: center;
-      color: white;
-      font-size: 1.3em;
-      text-shadow: 0 0 5px black;
-      pointer-events: none;
-      z-index: 10;
-      background: rgba(0,0,0,0.7);
-      padding: 10px;
+      position: fixed; bottom: 20px; left:0; width:100%; text-align:center;
+      color:white; font-size:1.2em; pointer-events:none; z-index:10;
+      background: rgba(0,0,0,0.5); padding:8px;
     }
-    
     .fallback {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.95);
-      color: white;
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      padding: 20px;
-      z-index: 2000;
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,0.95); color:white; display:none; flex-direction:column;
+      justify-content:center; align-items:center; text-align:center; padding:20px; z-index:2000;
     }
-    
     .btn {
-      background: gold;
-      color: #8B4513;
-      border: none;
-      padding: 15px 30px;
-      margin: 10px;
-      border-radius: 25px;
-      font-size: 1.1em;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
+      background: gold; color: #8B4513; border:none; padding:12px 22px; margin:8px; border-radius:20px; font-size:1em; cursor:pointer; text-decoration:none;
     }
   </style>
 
-  <!-- CARREGAMENTO TRADICIONAL - SEM MÓDULOS -->
+  <!-- three.js (r128) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- GLTFLoader non-module (declarado global como THREE.GLTFLoader) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- MindAR UMD -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-three.prod.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/jsm/loaders/GLTFLoader.min.js"></script>
 </head>
 
 <body>
@@ -128,22 +60,16 @@
     <h2>🎵 Retiro Espiritual - Experiência Digital</h2>
     <p>A funcionalidade de RA está temporariamente indisponível.</p>
     <p><strong>Todo o conteúdo espiritual está disponível abaixo:</strong></p>
-    
-    <div style="margin: 30px 0;">
+    <div style="margin:30px 0;">
       <a href="prayers.html" class="btn">📖 Ver Todas as Orações</a>
       <a href="https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI" class="btn" target="_blank">🎵 Playlist Spotify</a>
     </div>
-    
-    <p style="color: #ccc; margin-top: 20px;">
-      <em>"A oração é o encontro da sede de Deus com a nossa sede"</em>
-    </p>
+    <p style="color:#ccc; margin-top:20px;"><em>"A oração é o encontro da sede de Deus com a nossa sede"</em></p>
   </div>
 
   <script>
-    // Esperar até que todas as bibliotecas estejam carregadas
-    window.addEventListener('load', function() {
-      initializeAR();
-    });
+    // Iniciar quando window carregar
+    window.addEventListener('load', () => initializeAR());
 
     async function initializeAR() {
       const loading = document.getElementById('loading');
@@ -152,53 +78,37 @@
       const legend = document.getElementById('legend');
       const fallback = document.getElementById('fallback');
 
-      function updateStatus(text) {
-        status.textContent = text;
-        console.log(text);
-      }
+      function updateStatus(text) { status.textContent = text; console.log(text); }
+      function showFallback() { loading.style.display = 'none'; fallback.style.display = 'flex'; }
 
-      function showFallback() {
-        loading.style.display = 'none';
-        fallback.style.display = 'flex';
-      }
+      if (typeof THREE === 'undefined') { updateStatus('❌ THREE.js não carregou'); showFallback(); return; }
+      if (typeof MindARThree === 'undefined') { updateStatus('❌ MindAR não carregou'); showFallback(); return; }
 
-      // Verificar se as bibliotecas carregaram
-      if (typeof THREE === 'undefined') {
-        updateStatus('❌ THREE.js não carregou');
-        showFallback();
-        return;
-      }
-
-      if (typeof MindARThree === 'undefined') {
-        updateStatus('❌ MindAR não carregou');
-        showFallback();
-        return;
-      }
-
-      if (typeof GLTFLoader === 'undefined') {
-        updateStatus('❌ GLTFLoader não carregou');
-        showFallback();
-        return;
-      }
+      // Detecta GLTFLoader (script non-module registra THREE.GLTFLoader)
+      let GLTFLoaderClass = null;
+      if (THREE && THREE.GLTFLoader) GLTFLoaderClass = THREE.GLTFLoader;
+      else if (typeof GLTFLoader !== 'undefined') GLTFLoaderClass = GLTFLoader;
+      else { updateStatus('❌ GLTFLoader não encontrado'); showFallback(); return; }
 
       try {
         updateStatus('✅ Bibliotecas carregadas - Verificando arquivos...');
 
-        // Verificar se os arquivos existem
+        // Arquivos essenciais
         const filesToCheck = [
           './targets.mind',
           './assets/models/altar-compressed.glb',
           './assets/models/livro-compressed.glb'
         ];
 
-        for (const file of filesToCheck) {
+        // Verificação simples (usa GET por compatibilidade)
+        for (const f of filesToCheck) {
           try {
-            const response = await fetch(file, { method: 'HEAD' });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            console.log(`✅ ${file} encontrado`);
-          } catch (error) {
-            console.error(`❌ ${file} não encontrado:`, error);
-            updateStatus(`❌ Arquivo não encontrado: ${file}`);
+            const res = await fetch(f);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            console.log(`✅ ${f} encontrado`);
+          } catch (err) {
+            console.error(`❌ ${f} não encontrado:`, err);
+            updateStatus(`❌ Arquivo não encontrado: ${f}`);
             showFallback();
             return;
           }
@@ -206,131 +116,131 @@
 
         updateStatus('✅ Arquivos verificados - Iniciando MindAR...');
 
-        // INICIALIZAR MINDAR
+        // Instanciar MindAR
         const mindarThree = new MindARThree({
           container: container,
           imageTargetSrc: "./targets.mind",
         });
 
         const { renderer, scene, camera } = mindarThree;
-
-        // Configurar renderer
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
 
         updateStatus('✅ MindAR configurado - Carregando modelos...');
 
-        // LOADER
-        const loader = new GLTFLoader();
+        const loader = new GLTFLoaderClass();
 
-        // ANCHOR PRINCIPAL
+        // Anchor e grupos
         const anchor = mindarThree.addAnchor(0);
-        
-        // GRUPO PARA OS MODELOS
-        const modelsGroup = new THREE.Group();
-        anchor.group.add(modelsGroup);
+        const hubGroup = new THREE.Group(); // grupo com todos os itens do hub
+        anchor.group.add(hubGroup);
+
+        // Guardar referência ao altar root, transformações originais
+        let altarRoot = null;
+        let altarOriginal = null;
+        let altarFocused = false;
+
+        // Aid: achar o nó raiz do modelo (procuramos flag userData.modelRoot)
+        function findModelRoot(obj) {
+          let cur = obj;
+          while (cur && !cur.userData.modelRoot && cur.parent) cur = cur.parent;
+          return cur;
+        }
 
         let modelsLoaded = 0;
         const totalModels = 3;
-
         function onModelLoaded(name) {
           modelsLoaded++;
           updateStatus(`Carregando modelos... (${modelsLoaded}/${totalModels})`);
           console.log(`✅ ${name} carregado`);
-          
-          if (modelsLoaded === totalModels) {
-            updateStatus('✅ Todos os modelos carregados!');
-          }
+          if (modelsLoaded === totalModels) updateStatus('✅ Todos os modelos carregados!');
         }
 
-        // CARREGAR ALTAR
-        loader.load(
-          './assets/models/altar-compressed.glb',
+        // --- Altar
+        loader.load('./assets/models/altar-compressed.glb',
           function(gltf) {
             const model = gltf.scene;
             model.scale.set(0.4, 0.4, 0.4);
             model.position.set(0, 0, 0);
-            
-            // Tornar clicável
-            model.traverse(function(child) {
+            model.userData.modelRoot = true;
+            model.traverse(child => {
               if (child.isMesh) {
                 child.userData.clickable = true;
                 child.userData.type = 'altar';
               }
             });
-            
-            modelsGroup.add(model);
+            hubGroup.add(model);
+            altarRoot = model;
+            altarOriginal = {
+              position: model.position.clone(),
+              rotation: model.rotation.clone(),
+              scale: model.scale.clone()
+            };
             onModelLoaded('Altar');
           },
-          function(progress) {
-            // Progresso opcional
-          },
-          function(error) {
-            console.error('❌ Erro ao carregar altar:', error);
-            onModelLoaded('Altar (com erro)');
-          }
+          undefined,
+          function(err) { console.error('❌ Erro ao carregar altar:', err); onModelLoaded('Altar (com erro)'); }
         );
 
-        // CARREGAR LIVRO
-        loader.load(
-          './assets/models/livro-compressed.glb',
+        // --- Livro
+        loader.load('./assets/models/livro-compressed.glb',
           function(gltf) {
             const model = gltf.scene;
             model.scale.set(0.5, 0.5, 0.5);
-            model.position.set(1.5, 0.3, 0); // Direita do altar
+            model.position.set(1.5, 0.3, 0);
             model.rotation.set(0, Math.PI / 4, 0);
-            
-            model.traverse(function(child) {
+            model.userData.modelRoot = true;
+            model.traverse(child => {
               if (child.isMesh) {
                 child.userData.clickable = true;
                 child.userData.type = 'book';
               }
             });
-            
-            modelsGroup.add(model);
+            hubGroup.add(model);
             onModelLoaded('Livro');
           },
-          null,
-          function(error) {
-            console.error('❌ Erro ao carregar livro:', error);
-            onModelLoaded('Livro (com erro)');
-          }
+          undefined,
+          function(err) { console.error('❌ Erro ao carregar livro:', err); onModelLoaded('Livro (com erro)'); }
         );
 
-        // BOTÃO SPOTIFY
-        const spotifyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.05, 32);
-        const spotifyMaterial = new THREE.MeshBasicMaterial({ 
-          color: 0x1DB954,
-          transparent: true,
-          opacity: 0.9
+        // --- Spotify button (mesh)
+        const spotifyGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.18, 32);
+        const spotifyMaterial = new THREE.MeshStandardMaterial({
+          color: 0x1DB954, transparent: true, opacity: 0.95, side: THREE.DoubleSide
         });
         const spotifyButton = new THREE.Mesh(spotifyGeometry, spotifyMaterial);
-        spotifyButton.position.set(-1.5, 0.3, 0); // Esquerda do altar
+        spotifyButton.position.set(-1.5, 0.3, 0);
         spotifyButton.rotation.set(Math.PI / 2, 0, 0);
         spotifyButton.userData.clickable = true;
         spotifyButton.userData.type = 'spotify';
-        modelsGroup.add(spotifyButton);
+        hubGroup.add(spotifyButton);
         onModelLoaded('Spotify');
 
-        // EVENTOS
-        anchor.onTargetFound = function() {
+        // luz (para materiais Standard)
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+        scene.add(hemi);
+        const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+        dir.position.set(0, 1, 0);
+        scene.add(dir);
+
+        // Eventos do anchor
+        anchor.onTargetFound = () => {
           legend.textContent = "Marcador detectado! Clique nos objetos para interagir.";
           console.log('🎯 Marcador encontrado');
         };
-
-        anchor.onTargetLost = function() {
+        anchor.onTargetLost = () => {
           legend.textContent = "";
           console.log('👻 Marcador perdido');
         };
 
-        // SISTEMA DE CLIQUE
+        // Raycaster para cliques
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        renderer.domElement.addEventListener('click', function(event) {
-          // Só processar clique se o marcador estiver visível
-          if (!anchor.target.visible) {
+        renderer.domElement.addEventListener('click', (event) => {
+          // usar anchor.group.visible para saber se o marcador está ativo
+          if (!anchor.group.visible) {
             console.log('Clique ignorado - marcador não visível');
             return;
           }
@@ -338,73 +248,74 @@
           const rect = renderer.domElement.getBoundingClientRect();
           mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
           mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
           raycaster.setFromCamera(mouse, camera);
-          
-          // Coletar objetos clicáveis
-          const clickableObjects = [];
-          scene.traverse(function(object) {
-            if (object.userData.clickable) {
-              clickableObjects.push(object);
-            }
-          });
-          
-          const intersects = raycaster.intersectObjects(clickableObjects, true);
 
-          if (intersects.length > 0) {
-            const clickedObject = intersects[0].object;
-            const type = clickedObject.userData.type;
-            
-            console.log(`Clicou em: ${type}`);
-            
-            switch(type) {
-              case 'altar':
-                legend.textContent = "✨ Meditando no altar...";
-                // Efeito visual
-                if (clickedObject.parent) {
-                  clickedObject.parent.scale.set(0.45, 0.45, 0.45);
-                  setTimeout(function() {
-                    clickedObject.parent.scale.set(0.4, 0.4, 0.4);
-                  }, 300);
-                }
-                break;
-                
-              case 'book':
-                legend.textContent = "📖 Abrindo orações...";
-                setTimeout(function() {
-                  window.location.href = 'prayers.html';
-                }, 800);
-                break;
-                
-              case 'spotify':
-                legend.textContent = "🎵 Abrindo Spotify...";
-                setTimeout(function() {
-                  window.open('https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI', '_blank');
-                }, 800);
-                break;
+          // coletar objetos clicáveis
+          const clickableObjects = [];
+          scene.traverse(obj => {
+            if (obj.userData && obj.userData.clickable) clickableObjects.push(obj);
+          });
+
+          const intersects = raycaster.intersectObjects(clickableObjects, true);
+          if (intersects.length === 0) return;
+
+          const clicked = intersects[0].object;
+          const type = clicked.userData.type;
+          console.log('Clicou em:', type);
+
+          // achar root apropriado
+          const root = findModelRoot(clicked) || clicked.parent || clicked;
+
+          // Comportamentos por tipo
+          if (type === 'altar') {
+            // toggle mode: se não estiver em foco, entrar; senão voltar
+            if (!altarFocused && altarRoot) {
+              // esconder tudo exceto altar
+              hubGroup.children.forEach(child => {
+                if (child !== altarRoot) child.visible = false;
+              });
+              // aproximar e aumentar altar (em relação ao marker)
+              altarRoot.position.set(0, 0.0, 0); // manter no centro do marker
+              altarRoot.scale.set(0.8, 0.8, 0.8);
+              altarFocused = true;
+              legend.textContent = "✨ Meditando no altar — clique novamente para voltar";
+            } else if (altarFocused && altarRoot) {
+              // restaurar hub
+              hubGroup.children.forEach(child => child.visible = true);
+              // restaurar transformações originais
+              altarRoot.position.copy(altarOriginal.position);
+              altarRoot.rotation.copy(altarOriginal.rotation);
+              altarRoot.scale.copy(altarOriginal.scale);
+              altarFocused = false;
+              legend.textContent = "Marcador detectado! Clique nos objetos para interagir.";
             }
+            return;
+          }
+
+          if (type === 'book') {
+            legend.textContent = "📖 Abrindo orações...";
+            setTimeout(() => { window.location.href = 'prayers.html'; }, 600);
+            return;
+          }
+
+          if (type === 'spotify') {
+            legend.textContent = "🎵 Abrindo Spotify...";
+            setTimeout(() => { window.open('https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI', '_blank'); }, 600);
+            return;
           }
         });
 
         updateStatus('✅ Configuração completa - Iniciando câmera...');
-
-        // INICIAR MINDAR
         await mindarThree.start();
-        
         updateStatus('✅ RA Pronta! Aponte para o marcador.');
-        
-        // Esconder loading após 2 segundos
-        setTimeout(function() {
-          loading.style.display = 'none';
-        }, 2000);
+        // esconder loading
+        setTimeout(() => { loading.style.display = 'none'; }, 1200);
 
-        // LOOP DE RENDERIZAÇÃO
-        renderer.setAnimationLoop(function() {
-          renderer.render(scene, camera);
-        });
+        // render loop
+        renderer.setAnimationLoop(() => { renderer.render(scene, camera); });
 
-        // REDIMENSIONAMENTO
-        window.addEventListener('resize', function() {
+        // resize
+        window.addEventListener('resize', () => {
           camera.aspect = window.innerWidth / window.innerHeight;
           camera.updateProjectionMatrix();
           renderer.setSize(window.innerWidth, window.innerHeight);
@@ -412,19 +323,19 @@
 
       } catch (error) {
         console.error('❌ Erro fatal:', error);
-        updateStatus('❌ Erro: ' + error.message);
+        updateStatus('❌ Erro: ' + (error && error.message ? error.message : error));
         showFallback();
       }
     }
 
-    // Timeout de segurança
-    setTimeout(function() {
+    // Timeout de segurança: mostra fallback se ainda no loading
+    setTimeout(() => {
       const loading = document.getElementById('loading');
-      if (loading.style.display !== 'none') {
+      if (loading && loading.style.display !== 'none') {
         document.getElementById('fallback').style.display = 'flex';
         loading.style.display = 'none';
       }
-    }, 10000);
+    }, 12000);
   </script>
 </body>
 </html>
