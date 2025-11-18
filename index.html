@@ -1,341 +1,302 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>RA - Encontro de Jovens</title>
+  <title>RA - Encontro de Jovens (Direct)</title>
 
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body, html {
-      margin: 0; padding: 0; overflow: hidden;
-      background: #000; font-family: Arial, sans-serif;
-      width: 100vw; height: 100vh;
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{width:100%;height:100%;background:#000;font-family:Arial, sans-serif;overflow:hidden}
+    #container{position:fixed;top:0;left:0;width:100%;height:100%}
+    #statusBar{
+      position:fixed;top:12px;left:12px;z-index:9999;color:#fff;
+      background:rgba(0,0,0,0.55);padding:10px 14px;border-radius:10px;font-size:0.95rem;
     }
-    #container { position: fixed; top:0; left:0; width:100%; height:100%; }
-    #loading {
-      position: fixed; top:0; left:0; width:100%; height:100%;
-      background:#000; color:#fff; display:flex; flex-direction:column;
-      justify-content:center; align-items:center; z-index:1000; font-size:1.1em; text-align:center;
+    #permissionOverlay{
+      position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);z-index:10000;color:#fff;flex-direction:column;
     }
-    .spinner {
-      border:4px solid #333; border-top:4px solid gold; border-radius:50%;
-      width:50px; height:50px; animation:spin 1s linear infinite; margin:20px;
-    }
-    @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-    #legend {
-      position: fixed; bottom: 20px; left:0; width:100%; text-align:center;
-      color:white; font-size:1.2em; pointer-events:none; z-index:10;
-      background: rgba(0,0,0,0.5); padding:8px;
-    }
-    .fallback {
-      position: fixed; top:0; left:0; width:100%; height:100%;
-      background: rgba(0,0,0,0.95); color:white; display:none; flex-direction:column;
-      justify-content:center; align-items:center; text-align:center; padding:20px; z-index:2000;
-    }
-    .btn {
-      background: gold; color: #8B4513; border:none; padding:12px 22px; margin:8px; border-radius:20px; font-size:1em; cursor:pointer; text-decoration:none;
-    }
+    #permissionOverlay p{max-width:520px;text-align:center;margin-bottom:18px}
+    .btn{background:gold;color:#8b4513;padding:10px 18px;border-radius:18px;border:none;cursor:pointer;font-weight:600}
+    #errorMsg{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(180,20,20,0.9);color:#fff;padding:8px 12px;border-radius:8px;z-index:9999;display:none}
   </style>
 
-  <!-- three.js (r128) -->
+  <!-- three.js r128 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- GLTFLoader non-module (declarado global como THREE.GLTFLoader) -->
+  <!-- GLTFLoader non-module (global THREE.GLTFLoader) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js"></script>
   <!-- MindAR UMD -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-three.prod.js"></script>
 </head>
-
 <body>
-  <div id="loading">
-    <div class="spinner"></div>
-    <p>Carregando experiência de Realidade Aumentada...</p>
-    <p id="status">Inicializando...</p>
-  </div>
-
   <div id="container"></div>
-  <div id="legend"></div>
 
-  <div class="fallback" id="fallback">
-    <h2>🎵 Retiro Espiritual - Experiência Digital</h2>
-    <p>A funcionalidade de RA está temporariamente indisponível.</p>
-    <p><strong>Todo o conteúdo espiritual está disponível abaixo:</strong></p>
-    <div style="margin:30px 0;">
-      <a href="prayers.html" class="btn">📖 Ver Todas as Orações</a>
-      <a href="https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI" class="btn" target="_blank">🎵 Playlist Spotify</a>
+  <div id="statusBar">Iniciando...</div>
+
+  <!-- Overlay simples para forçar permissões (aparece só até aceitar câmera) -->
+  <div id="permissionOverlay" style="display:flex">
+    <p>
+      Para iniciar a experiência de Realidade Aumentada, precisamos acessar a câmera.
+      Clique em <strong>Solicitar câmera</strong> e permita o acesso quando o navegador pedir.
+    </p>
+    <div>
+      <button id="btnRequest" class="btn">Solicitar câmera</button>
     </div>
-    <p style="color:#ccc; margin-top:20px;"><em>"A oração é o encontro da sede de Deus com a nossa sede"</em></p>
+    <p style="font-size:0.85rem;margin-top:12px;color:#ddd">Se o prompt não aparecer, verifique configurações do navegador (bloqueio de câmera).</p>
   </div>
+
+  <div id="errorMsg"></div>
 
   <script>
-    // Iniciar quando window carregar
-    window.addEventListener('load', () => initializeAR());
+    const statusBar = document.getElementById('statusBar');
+    const permissionOverlay = document.getElementById('permissionOverlay');
+    const btnRequest = document.getElementById('btnRequest');
+    const errorMsg = document.getElementById('errorMsg');
 
-    async function initializeAR() {
-      const loading = document.getElementById('loading');
-      const status = document.getElementById('status');
-      const container = document.getElementById('container');
-      const legend = document.getElementById('legend');
-      const fallback = document.getElementById('fallback');
+    function updateStatus(txt) { statusBar.textContent = txt; console.log(txt); }
+    function showError(txt) { errorMsg.style.display = 'block'; errorMsg.textContent = txt; console.error(txt); }
 
-      function updateStatus(text) { status.textContent = text; console.log(text); }
-      function showFallback() { loading.style.display = 'none'; fallback.style.display = 'flex'; }
+    // Verificações básicas de libs
+    if (typeof THREE === 'undefined') {
+      updateStatus('Erro: THREE.js não disponível');
+      document.body.style.background = '#111';
+      showError('Erro crítico: THREE.js não carregou.');
+      // ainda assim mostramos overlay para instruir usuário
+    }
+    if (typeof MindARThree === 'undefined') {
+      updateStatus('Erro: MindAR não disponível');
+      showError('Erro crítico: MindAR não carregou.');
+    }
 
-      if (typeof THREE === 'undefined') { updateStatus('❌ THREE.js não carregou'); showFallback(); return; }
-      if (typeof MindARThree === 'undefined') { updateStatus('❌ MindAR não carregou'); showFallback(); return; }
-
-      // Detecta GLTFLoader (script non-module registra THREE.GLTFLoader)
-      let GLTFLoaderClass = null;
-      if (THREE && THREE.GLTFLoader) GLTFLoaderClass = THREE.GLTFLoader;
-      else if (typeof GLTFLoader !== 'undefined') GLTFLoaderClass = GLTFLoader;
-      else { updateStatus('❌ GLTFLoader não encontrado'); showFallback(); return; }
-
+    // Forçar prompt de câmera para evitar que usuário perca a janela da RA
+    async function requestCameraPermission() {
+      updateStatus('Solicitando permissão de câmera...');
       try {
-        updateStatus('✅ Bibliotecas carregadas - Verificando arquivos...');
-
-        // Arquivos essenciais
-        const filesToCheck = [
-          './targets.mind',
-          './assets/models/altar-compressed.glb',
-          './assets/models/livro-compressed.glb'
-        ];
-
-        // Verificação simples (usa GET por compatibilidade)
-        for (const f of filesToCheck) {
-          try {
-            const res = await fetch(f);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            console.log(`✅ ${f} encontrado`);
-          } catch (err) {
-            console.error(`❌ ${f} não encontrado:`, err);
-            updateStatus(`❌ Arquivo não encontrado: ${f}`);
-            showFallback();
-            return;
-          }
-        }
-
-        updateStatus('✅ Arquivos verificados - Iniciando MindAR...');
-
-        // Instanciar MindAR
-        const mindarThree = new MindARThree({
-          container: container,
-          imageTargetSrc: "./targets.mind",
-        });
-
-        const { renderer, scene, camera } = mindarThree;
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.domElement.style.width = '100%';
-        renderer.domElement.style.height = '100%';
-
-        updateStatus('✅ MindAR configurado - Carregando modelos...');
-
-        const loader = new GLTFLoaderClass();
-
-        // Anchor e grupos
-        const anchor = mindarThree.addAnchor(0);
-        const hubGroup = new THREE.Group(); // grupo com todos os itens do hub
-        anchor.group.add(hubGroup);
-
-        // Guardar referência ao altar root, transformações originais
-        let altarRoot = null;
-        let altarOriginal = null;
-        let altarFocused = false;
-
-        // Aid: achar o nó raiz do modelo (procuramos flag userData.modelRoot)
-        function findModelRoot(obj) {
-          let cur = obj;
-          while (cur && !cur.userData.modelRoot && cur.parent) cur = cur.parent;
-          return cur;
-        }
-
-        let modelsLoaded = 0;
-        const totalModels = 3;
-        function onModelLoaded(name) {
-          modelsLoaded++;
-          updateStatus(`Carregando modelos... (${modelsLoaded}/${totalModels})`);
-          console.log(`✅ ${name} carregado`);
-          if (modelsLoaded === totalModels) updateStatus('✅ Todos os modelos carregados!');
-        }
-
-        // --- Altar
-        loader.load('./assets/models/altar-compressed.glb',
-          function(gltf) {
-            const model = gltf.scene;
-            model.scale.set(0.4, 0.4, 0.4);
-            model.position.set(0, 0, 0);
-            model.userData.modelRoot = true;
-            model.traverse(child => {
-              if (child.isMesh) {
-                child.userData.clickable = true;
-                child.userData.type = 'altar';
-              }
-            });
-            hubGroup.add(model);
-            altarRoot = model;
-            altarOriginal = {
-              position: model.position.clone(),
-              rotation: model.rotation.clone(),
-              scale: model.scale.clone()
-            };
-            onModelLoaded('Altar');
-          },
-          undefined,
-          function(err) { console.error('❌ Erro ao carregar altar:', err); onModelLoaded('Altar (com erro)'); }
-        );
-
-        // --- Livro
-        loader.load('./assets/models/livro-compressed.glb',
-          function(gltf) {
-            const model = gltf.scene;
-            model.scale.set(0.5, 0.5, 0.5);
-            model.position.set(1.5, 0.3, 0);
-            model.rotation.set(0, Math.PI / 4, 0);
-            model.userData.modelRoot = true;
-            model.traverse(child => {
-              if (child.isMesh) {
-                child.userData.clickable = true;
-                child.userData.type = 'book';
-              }
-            });
-            hubGroup.add(model);
-            onModelLoaded('Livro');
-          },
-          undefined,
-          function(err) { console.error('❌ Erro ao carregar livro:', err); onModelLoaded('Livro (com erro)'); }
-        );
-
-        // --- Spotify button (mesh)
-        const spotifyGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.18, 32);
-        const spotifyMaterial = new THREE.MeshStandardMaterial({
-          color: 0x1DB954, transparent: true, opacity: 0.95, side: THREE.DoubleSide
-        });
-        const spotifyButton = new THREE.Mesh(spotifyGeometry, spotifyMaterial);
-        spotifyButton.position.set(-1.5, 0.3, 0);
-        spotifyButton.rotation.set(Math.PI / 2, 0, 0);
-        spotifyButton.userData.clickable = true;
-        spotifyButton.userData.type = 'spotify';
-        hubGroup.add(spotifyButton);
-        onModelLoaded('Spotify');
-
-        // luz (para materiais Standard)
-        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
-        scene.add(hemi);
-        const dir = new THREE.DirectionalLight(0xffffff, 0.6);
-        dir.position.set(0, 1, 0);
-        scene.add(dir);
-
-        // Eventos do anchor
-        anchor.onTargetFound = () => {
-          legend.textContent = "Marcador detectado! Clique nos objetos para interagir.";
-          console.log('🎯 Marcador encontrado');
-        };
-        anchor.onTargetLost = () => {
-          legend.textContent = "";
-          console.log('👻 Marcador perdido');
-        };
-
-        // Raycaster para cliques
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        renderer.domElement.addEventListener('click', (event) => {
-          // usar anchor.group.visible para saber se o marcador está ativo
-          if (!anchor.group.visible) {
-            console.log('Clique ignorado - marcador não visível');
-            return;
-          }
-
-          const rect = renderer.domElement.getBoundingClientRect();
-          mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-          raycaster.setFromCamera(mouse, camera);
-
-          // coletar objetos clicáveis
-          const clickableObjects = [];
-          scene.traverse(obj => {
-            if (obj.userData && obj.userData.clickable) clickableObjects.push(obj);
-          });
-
-          const intersects = raycaster.intersectObjects(clickableObjects, true);
-          if (intersects.length === 0) return;
-
-          const clicked = intersects[0].object;
-          const type = clicked.userData.type;
-          console.log('Clicou em:', type);
-
-          // achar root apropriado
-          const root = findModelRoot(clicked) || clicked.parent || clicked;
-
-          // Comportamentos por tipo
-          if (type === 'altar') {
-            // toggle mode: se não estiver em foco, entrar; senão voltar
-            if (!altarFocused && altarRoot) {
-              // esconder tudo exceto altar
-              hubGroup.children.forEach(child => {
-                if (child !== altarRoot) child.visible = false;
-              });
-              // aproximar e aumentar altar (em relação ao marker)
-              altarRoot.position.set(0, 0.0, 0); // manter no centro do marker
-              altarRoot.scale.set(0.8, 0.8, 0.8);
-              altarFocused = true;
-              legend.textContent = "✨ Meditando no altar — clique novamente para voltar";
-            } else if (altarFocused && altarRoot) {
-              // restaurar hub
-              hubGroup.children.forEach(child => child.visible = true);
-              // restaurar transformações originais
-              altarRoot.position.copy(altarOriginal.position);
-              altarRoot.rotation.copy(altarOriginal.rotation);
-              altarRoot.scale.copy(altarOriginal.scale);
-              altarFocused = false;
-              legend.textContent = "Marcador detectado! Clique nos objetos para interagir.";
-            }
-            return;
-          }
-
-          if (type === 'book') {
-            legend.textContent = "📖 Abrindo orações...";
-            setTimeout(() => { window.location.href = 'prayers.html'; }, 600);
-            return;
-          }
-
-          if (type === 'spotify') {
-            legend.textContent = "🎵 Abrindo Spotify...";
-            setTimeout(() => { window.open('https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI', '_blank'); }, 600);
-            return;
-          }
-        });
-
-        updateStatus('✅ Configuração completa - Iniciando câmera...');
-        await mindarThree.start();
-        updateStatus('✅ RA Pronta! Aponte para o marcador.');
-        // esconder loading
-        setTimeout(() => { loading.style.display = 'none'; }, 1200);
-
-        // render loop
-        renderer.setAnimationLoop(() => { renderer.render(scene, camera); });
-
-        // resize
-        window.addEventListener('resize', () => {
-          camera.aspect = window.innerWidth / window.innerHeight;
-          camera.updateProjectionMatrix();
-          renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-      } catch (error) {
-        console.error('❌ Erro fatal:', error);
-        updateStatus('❌ Erro: ' + (error && error.message ? error.message : error));
-        showFallback();
+        // tenta abrir stream só para disparar prompt
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // imediatamente fecha para liberar câmera (MindAR abrirá a própria)
+        stream.getTracks().forEach(t => t.stop());
+        updateStatus('Permissão concedida. Iniciando RA...');
+        permissionOverlay.style.display = 'none';
+        initMindAR(); // iniciar somente após permissão
+      } catch (err) {
+        updateStatus('Permissão de câmera negada ou erro.');
+        showError('Permissão de câmera negada. Permita o uso de câmera nas configurações do navegador e recarregue a página.');
+        console.error('getUserMedia error:', err);
       }
     }
 
-    // Timeout de segurança: mostra fallback se ainda no loading
-    setTimeout(() => {
-      const loading = document.getElementById('loading');
-      if (loading && loading.style.display !== 'none') {
-        document.getElementById('fallback').style.display = 'flex';
-        loading.style.display = 'none';
+    btnRequest.addEventListener('click', requestCameraPermission);
+
+    // Inicia MindAR + three, carregando modelos etc
+    async function initMindAR() {
+      updateStatus('Verificando bibliotecas e assets...');
+
+      // Detecta GLTFLoader (non-module)
+      let GLTFLoaderClass = null;
+      if (THREE && THREE.GLTFLoader) GLTFLoaderClass = THREE.GLTFLoader;
+      else if (typeof GLTFLoader !== 'undefined') GLTFLoaderClass = GLTFLoader;
+      else {
+        showError('GLTFLoader não encontrado. Verifique imports.');
+        return;
       }
-    }, 12000);
+
+      // Paths (verifique se os nomes/case estão corretos no repo)
+      const targetFile = './targets.mind';
+      const altarFile = './assets/models/altar-compressed.glb';
+      const bookFile = './assets/models/livro-compressed.glb';
+
+      // opcional: checar rapidamente se arquivos existem (GET)
+      try {
+        updateStatus('Verificando arquivos: targets e modelos...');
+        const checks = await Promise.all([
+          fetch(targetFile),
+          fetch(altarFile),
+          fetch(bookFile)
+        ]);
+        for (let i=0;i<checks.length;i++){
+          if (!checks[i].ok) throw new Error('Arquivo não encontrado (HTTP ' + checks[i].status + ')');
+        }
+      } catch (err) {
+        showError('Erro: Não encontrou targets.mind ou .glb — verifique caminhos e nomes (case-sensitive).');
+        console.error('File check error:', err);
+        // NÃO mostramos fallback; apenas informamos
+        return;
+      }
+
+      updateStatus('Inicializando MindAR...');
+      let mindarThree;
+      try {
+        mindarThree = new MindARThree({ container: document.getElementById('container'), imageTargetSrc: targetFile });
+      } catch (err) {
+        showError('Erro ao criar MindARThree: ' + err.message);
+        console.error('MindARThree constructor error', err);
+        return;
+      }
+
+      const { renderer, scene, camera } = mindarThree;
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
+
+      const loader = new GLTFLoaderClass();
+
+      const anchor = mindarThree.addAnchor(0);
+      const hubGroup = new THREE.Group();
+      anchor.group.add(hubGroup);
+
+      let altarRoot = null, altarOriginal = null, altarFocused = false;
+
+      function findModelRoot(obj) {
+        let cur = obj;
+        while (cur && !cur.userData.modelRoot && cur.parent) cur = cur.parent;
+        return cur;
+      }
+
+      function simpleOnLoaded(name) {
+        updateStatus('Carregando modelos... ' + name);
+        console.log(name + ' carregado');
+      }
+
+      // load altar
+      loader.load(altarFile, function(gltf) {
+        const m = gltf.scene;
+        m.scale.set(0.4,0.4,0.4);
+        m.position.set(0,0,0);
+        m.userData.modelRoot = true;
+        m.traverse(ch => { if (ch.isMesh) { ch.userData.clickable = true; ch.userData.type = 'altar'; }});
+        hubGroup.add(m);
+        altarRoot = m;
+        altarOriginal = { position: m.position.clone(), rotation: m.rotation.clone(), scale: m.scale.clone() };
+        simpleOnLoaded('Altar');
+      }, undefined, function(err){ console.error('Altar load error', err); simpleOnLoaded('Altar (erro)'); });
+
+      // load book
+      loader.load(bookFile, function(gltf){
+        const m = gltf.scene;
+        m.scale.set(0.5,0.5,0.5);
+        m.position.set(1.5,0.3,0);
+        m.rotation.set(0, Math.PI/4, 0);
+        m.userData.modelRoot = true;
+        m.traverse(ch => { if (ch.isMesh) { ch.userData.clickable = true; ch.userData.type = 'book'; }});
+        hubGroup.add(m);
+        simpleOnLoaded('Livro');
+      }, undefined, function(err){ console.error('Livro load error', err); simpleOnLoaded('Livro (erro)'); });
+
+      // spotify button
+      const spotifyGeo = new THREE.CylinderGeometry(0.35,0.35,0.18,32);
+      const spotifyMat = new THREE.MeshStandardMaterial({ color:0x1DB954, transparent:true, opacity:0.95, side:THREE.DoubleSide });
+      const spotifyBtn = new THREE.Mesh(spotifyGeo, spotifyMat);
+      spotifyBtn.position.set(-1.5,0.3,0);
+      spotifyBtn.rotation.set(Math.PI/2,0,0);
+      spotifyBtn.userData.clickable = true;
+      spotifyBtn.userData.type = 'spotify';
+      hubGroup.add(spotifyBtn);
+      simpleOnLoaded('Spotify');
+
+      // luz
+      const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+      scene.add(hemi);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+      dir.position.set(0,1,0);
+      scene.add(dir);
+
+      anchor.onTargetFound = () => { updateStatus('Marcador detectado — clique nos objetos.'); };
+      anchor.onTargetLost = () => { updateStatus('Marcador perdido — aponte novamente.'); };
+
+      // raycast click
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      renderer.domElement.addEventListener('click', (ev) => {
+        if (!anchor.group.visible) {
+          console.log('clicou mas marcador não visível');
+          return;
+        }
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+
+        const clickable = [];
+        scene.traverse(o => { if (o.userData && o.userData.clickable) clickable.push(o); });
+
+        const ints = raycaster.intersectObjects(clickable, true);
+        if (!ints.length) return;
+        const clicked = ints[0].object;
+        const type = clicked.userData.type;
+        console.log('clicou em', type);
+
+        const root = findModelRoot(clicked) || clicked.parent || clicked;
+        if (type === 'altar') {
+          if (!altarFocused && altarRoot) {
+            // esconder outros itens
+            hubGroup.children.forEach(c => { if (c !== altarRoot) c.visible = false; });
+            altarRoot.position.set(0, 0, 0);
+            altarRoot.scale.set(0.8,0.8,0.8);
+            altarFocused = true;
+            updateStatus('Meditando no altar — clique novamente para voltar');
+          } else if (altarFocused && altarRoot) {
+            hubGroup.children.forEach(c => c.visible = true);
+            altarRoot.position.copy(altarOriginal.position);
+            altarRoot.rotation.copy(altarOriginal.rotation);
+            altarRoot.scale.copy(altarOriginal.scale);
+            altarFocused = false;
+            updateStatus('Marcador detectado — clique nos objetos.');
+          }
+          return;
+        }
+        if (type === 'book') {
+          updateStatus('Abrindo orações...');
+          setTimeout(()=> location.href='prayers.html', 600);
+          return;
+        }
+        if (type === 'spotify') {
+          updateStatus('Abrindo Spotify...');
+          setTimeout(()=> window.open('https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI','_blank'), 600);
+          return;
+        }
+      });
+
+      // start mindar
+      try {
+        updateStatus('Iniciando motor da RA (câmera)...');
+        await mindarThree.start();
+        updateStatus('RA pronta — aponte para o marcador!');
+        permissionOverlay.style.display = 'none';
+        // render loop
+        renderer.setAnimationLoop(()=> renderer.render(scene, camera));
+      } catch (err) {
+        showError('Erro ao iniciar RA: ' + (err && err.message ? err.message : err));
+        console.error('mindar start error', err);
+      }
+
+      // resize
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
+
+    // Se o usuário já deu permissão anteriormente, podemos tentar iniciar direto:
+    (async () => {
+      try {
+        const p = await navigator.permissions.query({ name: 'camera' });
+        if (p.state === 'granted') {
+          // inicia imediatamente
+          permissionOverlay.style.display = 'none';
+          updateStatus('Permissão de câmera já concedida. Iniciando RA...');
+          initMindAR();
+        } else {
+          updateStatus('Aguardando permissão de câmera (clique em "Solicitar câmera")');
+          // overlay fica visível esperando o botão
+        }
+      } catch (err) {
+        // browsers nem sempre suportam permissions.query para 'camera' — deixamos o overlay
+        updateStatus('Clique em "Solicitar câmera" para ativar a RA');
+      }
+    })();
   </script>
 </body>
 </html>
