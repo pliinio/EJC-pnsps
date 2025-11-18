@@ -219,6 +219,21 @@
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
 
+        // ========= ILUMINAÇÃO =========
+        // Luz ambiente suave
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+
+        // Luz direcional principal
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 10, 7);
+        scene.add(directionalLight);
+
+        // Luz direcional de preenchimento
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        fillLight.position.set(-5, 5, 5);
+        scene.add(fillLight);
+
         updateStatus('✅ MindAR configurado - Carregando modelos...');
 
         // LOADER
@@ -244,24 +259,41 @@
           }
         }
 
-        // CARREGAR ALTAR
+        // ========= ALTAR =========
         loader.load(
           './assets/models/altar-compressed.glb',
           function(gltf) {
             const model = gltf.scene;
-            model.scale.set(0.4, 0.4, 0.4);
-            model.position.set(0, 0, 0);
+            
+            // ESCALA BEM MENOR
+            model.scale.set(0.15, 0.15, 0.15);
+            
+            // POSIÇÃO: centro, mas mais para trás
+            model.position.set(0, -0.2, -0.5);
+            
+            // ROTAÇÃO para ficar de frente
+            model.rotation.set(0, Math.PI, 0);
             
             // Tornar clicável
             model.traverse(function(child) {
               if (child.isMesh) {
                 child.userData.clickable = true;
                 child.userData.type = 'altar';
+                
+                // Melhorar materiais para iluminação
+                if (child.material) {
+                  child.material = child.material.clone();
+                  if (child.material.emissive) {
+                    child.material.emissive.set(0x333333);
+                  }
+                }
               }
             });
             
             modelsGroup.add(model);
             onModelLoaded('Altar');
+            
+            console.log('Altar posicionado:', model.position);
           },
           function(progress) {
             // Progresso opcional
@@ -272,24 +304,40 @@
           }
         );
 
-        // CARREGAR LIVRO
+        // ========= LIVRO =========
         loader.load(
           './assets/models/livro-compressed.glb',
           function(gltf) {
             const model = gltf.scene;
-            model.scale.set(0.5, 0.5, 0.5);
-            model.position.set(1.5, 0.3, 0); // Direita do altar
-            model.rotation.set(0, Math.PI / 4, 0);
+            
+            // ESCALA BEM MENOR
+            model.scale.set(0.08, 0.08, 0.08);
+            
+            // POSIÇÃO: direita do altar, mais separado
+            model.position.set(1.0, -0.1, 0);
+            
+            // ROTAÇÃO para ficar visível
+            model.rotation.set(0, -Math.PI/3, 0);
             
             model.traverse(function(child) {
               if (child.isMesh) {
                 child.userData.clickable = true;
                 child.userData.type = 'book';
+                
+                // Melhorar materiais
+                if (child.material) {
+                  child.material = child.material.clone();
+                  if (child.material.emissive) {
+                    child.material.emissive.set(0x222222);
+                  }
+                }
               }
             });
             
             modelsGroup.add(model);
             onModelLoaded('Livro');
+            
+            console.log('Livro posicionado:', model.position);
           },
           null,
           function(error) {
@@ -298,25 +346,74 @@
           }
         );
 
-        // BOTÃO SPOTIFY
-        const spotifyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.05, 32);
-        const spotifyMaterial = new THREE.MeshBasicMaterial({ 
+        // ========= SPOTIFY =========
+        // Botão do Spotify mais visível e bem posicionado
+        const spotifyGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.02, 32);
+        const spotifyMaterial = new THREE.MeshPhongMaterial({ 
           color: 0x1DB954,
+          shininess: 30,
           transparent: true,
           opacity: 0.9
         });
         const spotifyButton = new THREE.Mesh(spotifyGeometry, spotifyMaterial);
-        spotifyButton.position.set(-1.5, 0.3, 0); // Esquerda do altar
+        
+        // POSIÇÃO: esquerda do altar, mais separado
+        spotifyButton.position.set(-1.0, -0.1, 0);
         spotifyButton.rotation.set(Math.PI / 2, 0, 0);
         spotifyButton.userData.clickable = true;
         spotifyButton.userData.type = 'spotify';
+        
+        // Adicionar ícone do Spotify (plano branco)
+        const iconGeometry = new THREE.PlaneGeometry(0.2, 0.2);
+        const iconMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.9
+        });
+        const spotifyIcon = new THREE.Mesh(iconGeometry, iconMaterial);
+        spotifyIcon.position.set(0, 0, 0.015);
+        spotifyIcon.rotation.set(0, 0, 0);
+        spotifyButton.add(spotifyIcon);
+        
         modelsGroup.add(spotifyButton);
         onModelLoaded('Spotify');
+        
+        console.log('Spotify posicionado:', spotifyButton.position);
 
-        // EVENTOS
+        // ========= TEXTOS 3D =========
+        // Adicionar textos descritivos sobre cada objeto
+        const fontLoader = new THREE.FontLoader();
+        
+        // Texto para o livro
+        const bookTextGeometry = new THREE.PlaneGeometry(0.8, 0.2);
+        const bookTextMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.8
+        });
+        const bookText = new THREE.Mesh(bookTextGeometry, bookTextMaterial);
+        bookText.position.set(1.0, 0.3, 0);
+        bookText.rotation.set(-Math.PI/2, 0, 0);
+        modelsGroup.add(bookText);
+
+        // Texto para o Spotify
+        const spotifyTextGeometry = new THREE.PlaneGeometry(0.8, 0.2);
+        const spotifyTextMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.8
+        });
+        const spotifyText = new THREE.Mesh(spotifyTextGeometry, spotifyTextMaterial);
+        spotifyText.position.set(-1.0, 0.3, 0);
+        spotifyText.rotation.set(-Math.PI/2, 0, 0);
+        modelsGroup.add(spotifyText);
+
+        // ========= EVENTOS =========
         anchor.onTargetFound = function() {
           legend.textContent = "Marcador detectado! Clique nos objetos para interagir.";
-          console.log('🎯 Marcador encontrado');
+          console.log('🎯 Marcador encontrado - Modelos devem estar visíveis');
         };
 
         anchor.onTargetLost = function() {
@@ -324,7 +421,7 @@
           console.log('👻 Marcador perdido');
         };
 
-        // SISTEMA DE CLIQUE
+        // ========= SISTEMA DE CLIQUE =========
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -360,11 +457,12 @@
             switch(type) {
               case 'altar':
                 legend.textContent = "✨ Meditando no altar...";
-                // Efeito visual
+                // Efeito visual de pulsação
                 if (clickedObject.parent) {
-                  clickedObject.parent.scale.set(0.45, 0.45, 0.45);
+                  const originalScale = clickedObject.parent.scale.clone();
+                  clickedObject.parent.scale.multiplyScalar(1.2);
                   setTimeout(function() {
-                    clickedObject.parent.scale.set(0.4, 0.4, 0.4);
+                    clickedObject.parent.scale.copy(originalScale);
                   }, 300);
                 }
                 break;
