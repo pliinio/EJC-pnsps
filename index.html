@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>RA - Encontro de Jovens (Direct)</title>
+  <title>RA - Encontro de Jovens</title>
 
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -21,11 +21,11 @@
     #errorMsg{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(180,20,20,0.9);color:#fff;padding:8px 12px;border-radius:8px;z-index:9999;display:none}
   </style>
 
-  <!-- three.js r128 -->
+  <!-- three.js r128 (non-module) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- GLTFLoader non-module (global THREE.GLTFLoader) -->
+  <!-- GLTFLoader non-module (this registers THREE.GLTFLoader) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js"></script>
-  <!-- MindAR UMD -->
+  <!-- MindAR UMD (non-module) -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-three.prod.js"></script>
 </head>
 <body>
@@ -33,7 +33,7 @@
 
   <div id="statusBar">Iniciando...</div>
 
-  <!-- Overlay simples para forçar permissões (aparece só até aceitar câmera) -->
+  <!-- Overlay para solicitar permissão de câmera (só até aceitar) -->
   <div id="permissionOverlay" style="display:flex">
     <p>
       Para iniciar a experiência de Realidade Aumentada, precisamos acessar a câmera.
@@ -42,7 +42,7 @@
     <div>
       <button id="btnRequest" class="btn">Solicitar câmera</button>
     </div>
-    <p style="font-size:0.85rem;margin-top:12px;color:#ddd">Se o prompt não aparecer, verifique configurações do navegador (bloqueio de câmera).</p>
+    <p style="font-size:0.85rem;margin-top:12px;color:#ddd">Se o prompt não aparecer, verifique se a câmera não está bloqueada no navegador.</p>
   </div>
 
   <div id="errorMsg"></div>
@@ -56,29 +56,25 @@
     function updateStatus(txt) { statusBar.textContent = txt; console.log(txt); }
     function showError(txt) { errorMsg.style.display = 'block'; errorMsg.textContent = txt; console.error(txt); }
 
-    // Verificações básicas de libs
+    // Verificações iniciais de bibliotecas
     if (typeof THREE === 'undefined') {
       updateStatus('Erro: THREE.js não disponível');
-      document.body.style.background = '#111';
       showError('Erro crítico: THREE.js não carregou.');
-      // ainda assim mostramos overlay para instruir usuário
     }
     if (typeof MindARThree === 'undefined') {
       updateStatus('Erro: MindAR não disponível');
       showError('Erro crítico: MindAR não carregou.');
     }
 
-    // Forçar prompt de câmera para evitar que usuário perca a janela da RA
+    // Função para disparar prompt de câmera
     async function requestCameraPermission() {
       updateStatus('Solicitando permissão de câmera...');
       try {
-        // tenta abrir stream só para disparar prompt
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        // imediatamente fecha para liberar câmera (MindAR abrirá a própria)
         stream.getTracks().forEach(t => t.stop());
         updateStatus('Permissão concedida. Iniciando RA...');
         permissionOverlay.style.display = 'none';
-        initMindAR(); // iniciar somente após permissão
+        initMindAR();
       } catch (err) {
         updateStatus('Permissão de câmera negada ou erro.');
         showError('Permissão de câmera negada. Permita o uso de câmera nas configurações do navegador e recarregue a página.');
@@ -88,39 +84,35 @@
 
     btnRequest.addEventListener('click', requestCameraPermission);
 
-    // Inicia MindAR + three, carregando modelos etc
+    // Iniciar MindAR e carregar modelos
     async function initMindAR() {
       updateStatus('Verificando bibliotecas e assets...');
 
-      // Detecta GLTFLoader (non-module)
+      // Detectar GLTFLoader non-module (registrado em THREE)
       let GLTFLoaderClass = null;
       if (THREE && THREE.GLTFLoader) GLTFLoaderClass = THREE.GLTFLoader;
-      else if (typeof GLTFLoader !== 'undefined') GLTFLoaderClass = GLTFLoader;
       else {
         showError('GLTFLoader não encontrado. Verifique imports.');
         return;
       }
 
-      // Paths (verifique se os nomes/case estão corretos no repo)
+      // Caminhos — confirme nomes e case-sensitive no repositório
       const targetFile = './targets.mind';
       const altarFile = './assets/models/altar-compressed.glb';
       const bookFile = './assets/models/livro-compressed.glb';
 
-      // opcional: checar rapidamente se arquivos existem (GET)
+      // Checagem rápida dos arquivos (GET)
       try {
-        updateStatus('Verificando arquivos: targets e modelos...');
-        const checks = await Promise.all([
+        updateStatus('Verificando targets.mind e modelos...');
+        const [t, a, b] = await Promise.all([
           fetch(targetFile),
           fetch(altarFile),
           fetch(bookFile)
         ]);
-        for (let i=0;i<checks.length;i++){
-          if (!checks[i].ok) throw new Error('Arquivo não encontrado (HTTP ' + checks[i].status + ')');
-        }
+        if (!t.ok || !a.ok || !b.ok) throw new Error('Algum arquivo retornou status não OK');
       } catch (err) {
-        showError('Erro: Não encontrou targets.mind ou .glb — verifique caminhos e nomes (case-sensitive).');
-        console.error('File check error:', err);
-        // NÃO mostramos fallback; apenas informamos
+        showError('Erro: não encontrou targets.mind ou modelos (.glb). Verifique caminhos e nomes (case-sensitive).');
+        console.error('File check error', err);
         return;
       }
 
@@ -129,7 +121,7 @@
       try {
         mindarThree = new MindARThree({ container: document.getElementById('container'), imageTargetSrc: targetFile });
       } catch (err) {
-        showError('Erro ao criar MindARThree: ' + err.message);
+        showError('Erro ao criar MindARThree: ' + (err && err.message ? err.message : err));
         console.error('MindARThree constructor error', err);
         return;
       }
@@ -153,12 +145,9 @@
         return cur;
       }
 
-      function simpleOnLoaded(name) {
-        updateStatus('Carregando modelos... ' + name);
-        console.log(name + ' carregado');
-      }
+      function onLoaded(name) { updateStatus('Carregando: ' + name); console.log(name + ' carregado'); }
 
-      // load altar
+      // Carregar altar
       loader.load(altarFile, function(gltf) {
         const m = gltf.scene;
         m.scale.set(0.4,0.4,0.4);
@@ -168,11 +157,11 @@
         hubGroup.add(m);
         altarRoot = m;
         altarOriginal = { position: m.position.clone(), rotation: m.rotation.clone(), scale: m.scale.clone() };
-        simpleOnLoaded('Altar');
-      }, undefined, function(err){ console.error('Altar load error', err); simpleOnLoaded('Altar (erro)'); });
+        onLoaded('Altar');
+      }, undefined, function(err){ console.error('Altar load error', err); onLoaded('Altar (erro)'); });
 
-      // load book
-      loader.load(bookFile, function(gltf){
+      // Carregar livro
+      loader.load(bookFile, function(gltf) {
         const m = gltf.scene;
         m.scale.set(0.5,0.5,0.5);
         m.position.set(1.5,0.3,0);
@@ -180,10 +169,10 @@
         m.userData.modelRoot = true;
         m.traverse(ch => { if (ch.isMesh) { ch.userData.clickable = true; ch.userData.type = 'book'; }});
         hubGroup.add(m);
-        simpleOnLoaded('Livro');
-      }, undefined, function(err){ console.error('Livro load error', err); simpleOnLoaded('Livro (erro)'); });
+        onLoaded('Livro');
+      }, undefined, function(err){ console.error('Livro load error', err); onLoaded('Livro (erro)'); });
 
-      // spotify button
+      // Botão Spotify
       const spotifyGeo = new THREE.CylinderGeometry(0.35,0.35,0.18,32);
       const spotifyMat = new THREE.MeshStandardMaterial({ color:0x1DB954, transparent:true, opacity:0.95, side:THREE.DoubleSide });
       const spotifyBtn = new THREE.Mesh(spotifyGeo, spotifyMat);
@@ -192,19 +181,19 @@
       spotifyBtn.userData.clickable = true;
       spotifyBtn.userData.type = 'spotify';
       hubGroup.add(spotifyBtn);
-      simpleOnLoaded('Spotify');
+      onLoaded('Spotify');
 
-      // luz
+      // Luz para materiais Standard
       const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
       scene.add(hemi);
       const dir = new THREE.DirectionalLight(0xffffff, 0.6);
       dir.position.set(0,1,0);
       scene.add(dir);
 
-      anchor.onTargetFound = () => { updateStatus('Marcador detectado — clique nos objetos.'); };
-      anchor.onTargetLost = () => { updateStatus('Marcador perdido — aponte novamente.'); };
+      anchor.onTargetFound = () => updateStatus('Marcador detectado — clique nos objetos.');
+      anchor.onTargetLost = () => updateStatus('Marcador perdido — aponte novamente.');
 
-      // raycast click
+      // Raycaster para cliques
       const raycaster = new THREE.Raycaster();
       const mouse = new THREE.Vector2();
 
@@ -230,7 +219,6 @@
         const root = findModelRoot(clicked) || clicked.parent || clicked;
         if (type === 'altar') {
           if (!altarFocused && altarRoot) {
-            // esconder outros itens
             hubGroup.children.forEach(c => { if (c !== altarRoot) c.visible = false; });
             altarRoot.position.set(0, 0, 0);
             altarRoot.scale.set(0.8,0.8,0.8);
@@ -258,13 +246,12 @@
         }
       });
 
-      // start mindar
+      // Start MindAR
       try {
-        updateStatus('Iniciando motor da RA (câmera)...');
+        updateStatus('Iniciando motor RA (câmera)...');
         await mindarThree.start();
         updateStatus('RA pronta — aponte para o marcador!');
         permissionOverlay.style.display = 'none';
-        // render loop
         renderer.setAnimationLoop(()=> renderer.render(scene, camera));
       } catch (err) {
         showError('Erro ao iniciar RA: ' + (err && err.message ? err.message : err));
@@ -279,22 +266,19 @@
       });
     }
 
-    // Se o usuário já deu permissão anteriormente, podemos tentar iniciar direto:
+    // Se já foi concedida permissão de câmera (para evitar clique manual)
     (async () => {
       try {
         const p = await navigator.permissions.query({ name: 'camera' });
         if (p.state === 'granted') {
-          // inicia imediatamente
           permissionOverlay.style.display = 'none';
           updateStatus('Permissão de câmera já concedida. Iniciando RA...');
           initMindAR();
         } else {
-          updateStatus('Aguardando permissão de câmera (clique em "Solicitar câmera")');
-          // overlay fica visível esperando o botão
+          updateStatus('Clique em "Solicitar câmera" para iniciar a RA');
         }
       } catch (err) {
-        // browsers nem sempre suportam permissions.query para 'camera' — deixamos o overlay
-        updateStatus('Clique em "Solicitar câmera" para ativar a RA');
+        updateStatus('Clique em "Solicitar câmera" para iniciar a RA');
       }
     })();
   </script>
