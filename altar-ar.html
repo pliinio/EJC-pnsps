@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
   <meta charset="UTF-8">
   <title>Altar Virtual</title>
@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body, html { margin: 0; height: 100%; overflow: hidden; background: black; }
+    body, html { margin: 0; height: 100%; overflow: hidden; }
 
     #backBtn{
       position: fixed;
@@ -29,6 +29,8 @@
 </head>
 
 <body>
+
+  <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
 
   <a-scene 
@@ -37,76 +39,55 @@
     embedded
     device-orientation-permission-ui="enabled: false">
 
+    <!-- ASSETS -->
     <a-assets>
       <a-asset-item id="altarModel" src="./assets/models/altar-compressed.glb"></a-asset-item>
     </a-assets>
 
+    <!-- CÂMERA -->
     <a-camera look-controls="enabled: false"></a-camera>
 
+    <!-- ANCHOR DO GATILHO -->
     <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0">
+
       <a-gltf-model 
         id="altar"
         src="#altarModel"
-        scale="0 0 0">
+        scale="0 0 0"> <!-- Começa pequeno para animar -->
       </a-gltf-model>
+
     </a-entity>
 
     <script>
-      const sceneEl = document.querySelector('a-scene');
-      const anchor = document.querySelector('#altar-anchor');
-      const altar  = document.querySelector('#altar');
+      const sceneEl = document.querySelector("a-scene");
+      const altar = document.querySelector("#altar");
 
-      let alreadyPlaced = false;
-
-      altar.object3D.visible = false;
-
+      // Quando reconhece o gatilho
       sceneEl.addEventListener("targetFound", () => {
-        if (alreadyPlaced) return;
-        alreadyPlaced = true;
 
-        // 1) Mostrar altar + animação suave
-        altar.object3D.visible = true;
+        // Reinicia animação sempre que o target aparecer
+        altar.setAttribute("scale", "0 0 0");
+
         altar.setAttribute("animation__grow", {
           property: "scale",
           from: "0 0 0",
           to: "0.4 0.4 0.4",
-          dur: 1200,
+          dur: 900,
           easing: "easeOutElastic"
         });
-
-        // 2) Copiar posição/rotação do anchor
-        const pos = anchor.object3D.position.clone();
-        const rot = anchor.object3D.rotation.clone();
-        const scl = anchor.object3D.scale.clone();
-
-        // 3) Remove o anchor (fixa o altar)
-        anchor.remove();
-        altar.object3D.position.copy(pos);
-        altar.object3D.rotation.copy(rot);
-        altar.object3D.scale.copy(scl);
-        sceneEl.object3D.add(altar.object3D);
-
-        // 4) ESPERAR 1 segundo antes de desligar tracking
-        setTimeout(() => {
-          const mindarSystem = sceneEl.systems["mindar-image-system"];
-
-          // desliga tracking, NÃO desliga vídeo
-          mindarSystem.tracking = false;
-          mindarSystem.pause();  // não fecha a câmera
-          
-          // remover scanner
-          const ui = document.querySelector(".mindar-ui-overlay");
-          if (ui) ui.remove();
-
-        }, 1000);
       });
 
+      // Quando perde o gatilho, some naturalmente
       sceneEl.addEventListener("targetLost", () => {
-        // não esconder nunca
+        altar.setAttribute("animation__shrink", {
+          property: "scale",
+          to: "0 0 0",
+          dur: 400,
+          easing: "easeInQuad"
+        });
       });
     </script>
 
   </a-scene>
 </body>
 </html>
-
