@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Altar Virtual</title>
 
   <!-- GSAP (para animações suaves) -->
@@ -13,139 +14,228 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body, html { margin: 0; height: 100%; overflow: hidden; }
-
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
     #backBtn{
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 9999;
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 10px 15px;
-      border-radius: 8px;
-      border: 1px solid white;
-      cursor: pointer;
-      font-size: 1.1em;
+      position: fixed; top: 10px; left: 10px; z-index: 9999;
+      background: rgba(0,0,0,0.6); color: white; padding: 10px 15px;
+      border-radius: 8px; border: 1px solid white; cursor: pointer; font-size: 1.05em;
     }
   </style>
 </head>
-
 <body>
-
-  <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
 
-  <a-scene 
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
+  <!-- Scene MindAR -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;"
     vr-mode-ui="enabled: false"
     embedded
-    device-orientation-permission-ui="enabled: false">
+    device-orientation-permission-ui="enabled: false"
+    id="scene"
+    background="color: #000000">
 
-    <!-- Assets -->
     <a-assets>
       <a-asset-item id="altarModel" src="./assets/models/altar-compressed.glb"></a-asset-item>
     </a-assets>
 
-    <!-- Câmera -->
+    <!-- Anchor: fica apenas como detector (sem filhos transformados diretamente) -->
+    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0"></a-entity>
+
+    <!-- Modelo (filho direto da cena, controlado por script) -->
+    <a-gltf-model
+      id="altar"
+      src="#altarModel"
+      visible="false"
+      position="0 0 0"
+      rotation="0 0 0"
+      scale="0.1 0.1 0.1">
+    </a-gltf-model>
+
+    <!-- Camera (sem look-controls) -->
     <a-camera look-controls="enabled: false"></a-camera>
 
-    <!-- ANCHOR DO GATILHO -->
-    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0">
-
-      <!-- MODELO DO ALTAR -->
-      <a-gltf-model 
-        id="altar"
-        src="#altarModel"
-        position="0 0 0"
-        rotation="0 0 0"
-        scale="0.1 0.1 0.1">
-      </a-gltf-model>
-
-    </a-entity>
-
-    <!-- ============================= -->
-    <!--       SCRIPT COMPLETO         -->
-    <!-- ============================= -->
     <script>
+      // referências DOM
+      const scene = document.querySelector('#scene');
       const anchor = document.querySelector('#altar-anchor');
       const altar = document.querySelector('#altar');
-    
-      /* -----------------------
-          ANIMAÇÃO APARECER (GSAP)
-      ------------------------ */
-    
-      // começa invisível
-      altar.object3D.scale.set(0, 0, 0);
-    
-      let animating = false;
-      let targetVisible = false;
-    
-      anchor.addEventListener("targetFound", () => {
-        targetVisible = true;
-    
-        if (!animating) {
-          animating = true;
-    
-          // zera o scale antes da animação
-          altar.object3D.scale.set(0, 0, 0);
-    
-          gsap.to(altar.object3D.scale, {
-            x: 0.4, y: 0.4, z: 0.4,
-            duration: 1.2,
-            ease: "elastic.out(0.4, 0.2)",
-            onComplete: () => animating = false
+
+      // parâmetros controláveis por atributo scene: smooth-anchor="stiffness:6; lagTimeout:500"
+      // registramos o componente para expor a interface
+      AFRAME.registerComponent('smooth-anchor', {
+        schema: {
+          stiffness: { type: 'number', default: 6.0 },    // velocidade do smoothing (maior = mais rígido)
+          lagTimeout: { type: 'int', default: 500 }       // ms para manter último pose após perda do target
+        },
+        init: function () {
+          // estado
+          this.targetVisible = false;       // evento targetFound/targetLost
+          this.animating = false;           // se GSAP está animando aparecimento/desaparecimento
+          this.appearScale = 0;             // 0..1 (multiplicador para animação de surgimento)
+
+          // smoothing world-space
+          this.smoothPos = new THREE.Vector3();
+          this.smoothQuat = new THREE.Quaternion();
+          this.smoothScale = new THREE.Vector3(1,1,1);
+
+          // armazenar a ultima pose conhecida (world-space) para o lag/hold
+          this.lastWorldPos = new THREE.Vector3();
+          this.lastWorldQuat = new THREE.Quaternion();
+          this.lastWorldScale = new THREE.Vector3(1,1,1);
+
+          // baseModelScale preserva a escala natural do GLTF
+          this.baseModelScale = new THREE.Vector3(1,1,1);
+
+          // controle de hold após perda do target
+          this.holdUntil = 0; // timestamp ms até o qual mantemos a última pose
+
+          // link para o elemento model (a entidade altar)
+          this.modelEl = altar;
+
+          // configurado a partir do schema
+          this.stiffness = this.data.stiffness;
+          this.lagTimeout = this.data.lagTimeout;
+
+          // bind para usar nos eventos
+          this.onTargetFound = this.onTargetFound.bind(this);
+          this.onTargetLost = this.onTargetLost.bind(this);
+
+          // listeners do mindAR anchor
+          anchor.addEventListener('targetFound', this.onTargetFound);
+          anchor.addEventListener('targetLost', this.onTargetLost);
+
+          // quando o modelo carregar, "injeta" na cena como filho direto (world-space control)
+          this.modelEl.addEventListener('model-loaded', () => {
+            // tornar visível para poder renderizar (controle via escala e visible flag)
+            this.modelEl.setAttribute('visible', 'true');
+
+            // salvar escala original do GLTF
+            this.baseModelScale.copy(this.modelEl.object3D.scale);
+
+            // certificar que o model é filho direto da cena — evita double transform
+            if (this.modelEl.parentNode && this.modelEl.parentNode !== scene) {
+              this.modelEl.parentNode.removeChild(this.modelEl);
+              scene.appendChild(this.modelEl);
+            }
+
+            // inicialmente escondemos via escala (usar appearScale = 0)
+            this.modelEl.object3D.scale.set(0,0,0);
           });
+        },
+
+        onTargetFound: function () {
+          this.targetVisible = true;
+          // cancelar hold
+          this.holdUntil = Infinity;
+
+          // anima aparecimento (appearScale 0 -> 1)
+          if (!this.animating) {
+            this.animating = true;
+            // objeto temporário para animar
+            const proxy = { s: this.appearScale };
+            gsap.killTweensOf(proxy);
+            gsap.to(proxy, {
+              s: 1,
+              duration: 1.2,
+              ease: 'elastic.out(0.6, 0.4)',
+              onUpdate: () => { this.appearScale = proxy.s; },
+              onComplete: () => { this.animating = false; }
+            });
+          }
+        },
+
+        onTargetLost: function () {
+          // ao perder, guardamos a última pose conhecida
+          anchor.object3D.updateMatrixWorld(true);
+          anchor.object3D.matrixWorld.decompose(this.lastWorldPos, this.lastWorldQuat, this.lastWorldScale);
+
+          this.targetVisible = false;
+          // definir holdUntil para dar um tempo antes de sumir
+          this.holdUntil = Date.now() + this.lagTimeout;
+
+          // anima desaparecimento do appearScale (1 -> 0)
+          if (!this.animating) {
+            this.animating = true;
+            const proxy = { s: this.appearScale };
+            gsap.killTweensOf(proxy);
+            gsap.to(proxy, {
+              s: 0,
+              duration: 0.6,
+              ease: 'power2.inOut',
+              onUpdate: () => { this.appearScale = proxy.s; },
+              onComplete: () => { this.animating = false; }
+            });
+          }
+        },
+
+        tick: function (time, timeDelta) {
+          // timeDelta em ms
+          if (!this.modelEl || !this.modelEl.object3D) return;
+
+          // se aparecerScale estiver em 0 total e já fora de hold, esconder para economizar draw
+          if (this.appearScale <= 0.00001 && Date.now() > this.holdUntil) {
+            this.modelEl.object3D.visible = false;
+            return;
+          } else {
+            this.modelEl.object3D.visible = true;
+          }
+
+          // quantos ms desde o último frame: limitado
+          const dt = Math.min(timeDelta / 1000, 0.1);
+          const alpha = 1 - Math.exp(-this.stiffness * dt);
+
+          // Determinar a pose alvo: se target visível -> decompor anchor.matrixWorld
+          const targetPos = new THREE.Vector3();
+          const targetQuat = new THREE.Quaternion();
+          const targetScale = new THREE.Vector3(1,1,1);
+
+          if (this.targetVisible) {
+            anchor.object3D.updateMatrixWorld(true);
+            anchor.object3D.matrixWorld.decompose(targetPos, targetQuat, targetScale);
+
+            // atualizar também lastWorld para o caso de perda em seguida
+            this.lastWorldPos.copy(targetPos);
+            this.lastWorldQuat.copy(targetQuat);
+            this.lastWorldScale.copy(targetScale);
+          } else {
+            // ainda no hold? usamos lastWorld como target até holdUntil
+            if (Date.now() <= this.holdUntil) {
+              targetPos.copy(this.lastWorldPos);
+              targetQuat.copy(this.lastWorldQuat);
+              targetScale.copy(this.lastWorldScale);
+            } else {
+              // pós hold: não há target para aplicar
+              return;
+            }
+          }
+
+          // suaviza
+          this.smoothPos.lerp(targetPos, alpha);
+          this.smoothQuat.slerp(targetQuat, alpha);
+          this.smoothScale.lerp(targetScale, alpha);
+
+          // aplica ao modelo (world-space)
+          this.modelEl.object3D.position.copy(this.smoothPos);
+          this.modelEl.object3D.quaternion.copy(this.smoothQuat);
+
+          // escala final = baseModelScale * smoothScale * appearScale
+          const finalScale = new THREE.Vector3();
+          finalScale.copy(this.smoothScale).multiply(this.baseModelScale).multiplyScalar(this.appearScale);
+
+          // evitar zeros absolutos (problemas com rendering)
+          const eps = 0.000001;
+          finalScale.x = Math.max(finalScale.x, eps);
+          finalScale.y = Math.max(finalScale.y, eps);
+          finalScale.z = Math.max(finalScale.z, eps);
+
+          this.modelEl.object3D.scale.copy(finalScale);
         }
       });
-    
-      anchor.addEventListener("targetLost", () => {
-        targetVisible = false;
-      });
-    
-    
-      /* -----------------------
-          SMOOTHING REAL (ANTI TREMEDEIRA)
-          — versão PRO
-          — suaviza o ANCHOR, não o modelo
-      ------------------------ */
-    
-      // objetivo: suavizar as transformações do anchor
-      let smoothPos = new THREE.Vector3();
-      let smoothQuat = new THREE.Quaternion();
-      let smoothScale = new THREE.Vector3(1, 1, 1);
-    
-      const stiffness = 0.35; // aumenta → modelo mais duro
-    
-      AFRAME.registerComponent("smooth-anchor", {
-        tick: function () {
-          if (!targetVisible) return;
-    
-          const anchorObj = anchor.object3D;
-    
-          // suaviza posição
-          smoothPos.lerp(anchorObj.position, stiffness);
-    
-          // suaviza rotação
-          smoothQuat.slerp(anchorObj.quaternion, stiffness);
-    
-          // suaviza escala
-          smoothScale.lerp(anchorObj.scale, stiffness);
-    
-          // joga os valores suavizados para o MODELO
-          const altarObj = altar.object3D;
-          altarObj.position.copy(smoothPos);
-          altarObj.quaternion.copy(smoothQuat);
-          altarObj.scale.copy(smoothScale);
-        }
-      });
-    
-      // ativar smoothing REAL
-      altar.setAttribute("smooth-anchor", "");
+
+      // Ativar o componente no scene com parâmetros padrão (você pode mudar no HTML: smooth-anchor="stiffness:6; lagTimeout:500")
+      scene.setAttribute('smooth-anchor', 'stiffness:6; lagTimeout:500');
     </script>
-    <!-- ============================= -->
 
   </a-scene>
 </body>
 </html>
-
