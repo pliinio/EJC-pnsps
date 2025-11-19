@@ -1,184 +1,105 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Altar Virtual — MindAR UMD (fix)</title>
+  <meta charset="UTF-8">
+  <title>Altar Virtual</title>
 
-  <!-- GSAP -->
+  <!-- A-Frame + MindAR -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-
-  <!-- A-Frame (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.2.0/dist/aframe.min.js"></script>
-
-  <!-- MindAR UMD builds (IMPORTANTE: NÃO usar type="module" aqui) -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    html,body{height:100%;margin:0;background:#000}
-    #backBtn{position:fixed;left:10px;top:10px;z-index:9999;padding:10px 14px;background:rgba(0,0,0,.6);color:#fff;border-radius:8px;border:1px solid #fff;cursor:pointer}
-    #dbg{position:fixed;right:10px;top:10px;z-index:9999;background:rgba(0,0,0,.5);color:#fff;padding:6px 8px;border-radius:6px;font-size:12px}
+    body, html { margin: 0; height: 100%; overflow: hidden; }
+
+    #backBtn{
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 9999;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid white;
+      cursor: pointer;
+      font-size: 1.1em;
+    }
   </style>
 </head>
+
 <body>
+
+  <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
-  <div id="dbg">status: idle</div>
 
-  <!-- scene: autoStart = true se quiser que abra sem gesture (porém mobile pode exigir gesture) -->
-  <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no"
-           vr-mode-ui="enabled: false"
-           embedded
-           device-orientation-permission-ui="enabled: false">
+  <a-scene 
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
+    vr-mode-ui="enabled: false"
+    embedded
+    device-orientation-permission-ui="enabled: false">
 
+    <!-- Assets -->
     <a-assets>
       <a-asset-item id="altarModel" src="./assets/models/altar-compressed.glb"></a-asset-item>
     </a-assets>
 
+    <!-- Câmera -->
     <a-camera look-controls="enabled: false"></a-camera>
 
-    <!-- anchor como detector -->
-    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0"></a-entity>
+    <!-- ANCHOR DO GATILHO -->
+    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0">
 
-    <!-- modelo (dentro do anchor como você preferiu originalmente) -->
-    <a-gltf-model id="altar" src="#altarModel" position="0 0 0" rotation="0 0 0" scale="0.1 0.1 0.1" visible="false"></a-gltf-model>
+      <!-- MODELO DO ALTAR -->
+      <a-gltf-model 
+        id="altar"
+        src="#altarModel"
+        position="0 0 0"
+        rotation="0 0 0"
+        scale="0.1 0.1 0.1">
+      </a-gltf-model>
+
+    </a-entity>
 
     <script>
-      (function(){
-        const anchor = document.querySelector('#altar-anchor');
-        const altar  = document.querySelector('#altar');
-        const dbgEl  = document.getElementById('dbg');
-      
-        function log(s){ if(dbgEl) dbgEl.textContent = 'status: ' + s; console.log('[AR]', s); }
-      
-        if (!anchor || !altar) { log('anchor/altar não encontrados'); return; }
-      
-        let modelReady = false;
-        let animating = false;
-        // escala original definida no GLTF (capturada no model-loaded)
-        const baseModelScale = new THREE.Vector3(1,1,1);
-        const appearMultiplier = 1.0; // multiplica a escala base -> ajustar se quiser maior/menor
-      
-        // ensure object3D exists and wait model-loaded
-        altar.addEventListener('model-loaded', () => {
-          modelReady = true;
-          log('model-loaded');
-          altar.setAttribute('visible', 'true');
-          // salvar a escala *original* do GLTF
-          baseModelScale.copy(altar.object3D.scale);
-          // começar escondido por escala
-          altar.object3D.scale.set(0,0,0);
-        });
-      
-        // fallback se já carregou
-        setTimeout(() => {
-          if (!modelReady && altar.object3D) {
-            modelReady = true;
-            altar.setAttribute('visible','true');
-            baseModelScale.copy(altar.object3D.scale);
-            altar.object3D.scale.set(0,0,0);
-            log('model-ready (fallback)');
-          }
-        }, 300);
-      
-        function safeDecomposeAnchor() {
-          // devolve {pos, quat, scale} com correções para scale=0 ou quat NaN
-          anchor.object3D.updateMatrixWorld(true);
-          const pos = new THREE.Vector3();
-          const quat = new THREE.Quaternion();
-          const scale = new THREE.Vector3();
-          anchor.object3D.matrixWorld.decompose(pos, quat, scale);
-      
-          // corrigir escala muito pequena / zero
-          const eps = 1e-6;
-          if (scale.length() < eps || !isFinite(scale.x) || !isFinite(scale.y) || !isFinite(scale.z)) {
-            scale.set(1,1,1); // ignorar escala do anchor quando inválida
-          }
-      
-          // corrigir quaternion inválida (NaN)
-          if (!isFinite(quat.x) || !isFinite(quat.y) || !isFinite(quat.z) || !isFinite(quat.w)) {
-            quat.set(0,0,0,1); // identidade
-          } else {
-            // garantir normalização
-            quat.normalize();
-          }
-      
-          return { pos, quat, scale };
-        }
-      
-        function showModelFromAnchor() {
-          if (!modelReady) { log('targetFound mas model não pronto'); return; }
-          if (animating) { log('já animando'); return; }
-      
-          // obter pose segura do anchor
-          const { pos, quat/*, scale*/ } = safeDecomposeAnchor();
-      
-          // aplicar posição/rotacao ao modelo (model é filho do scene)
-          if (altar.object3D) {
-            altar.object3D.position.copy(pos);
-            altar.object3D.quaternion.copy(quat);
-          } else {
-            log('altar.object3D ausente');
-            return;
-          }
-      
-          // animar escala: de zero -> baseModelScale * appearMultiplier
+      const anchor = document.querySelector('#altar-anchor');
+      const altar = document.querySelector('#altar');
+    
+      // Começa invisível com escala zero
+      altar.object3D.scale.set(0, 0, 0);
+    
+      let animating = false;
+    
+      anchor.addEventListener("targetFound", () => {
+    
+        // Só anima se NÃO estiver animando agora
+        if (!animating) {
           animating = true;
-          const finalScale = baseModelScale.clone().multiplyScalar(appearMultiplier);
-          // garantir eps para evitar zeros
-          const minEps = 1e-6;
-          finalScale.x = Math.max(finalScale.x, minEps);
-          finalScale.y = Math.max(finalScale.y, minEps);
-          finalScale.z = Math.max(finalScale.z, minEps);
-      
-          // reset para 0 e animar
-          altar.object3D.scale.set(minEps, minEps, minEps);
-          altar.setAttribute('visible', 'true');
-      
-          gsap.killTweensOf(altar.object3D.scale);
-          // animar proxy para evitar conflitos com outras escritas de escala
-          const proxy = { t: 0 };
-          gsap.to(proxy, {
-            t: 1,
+    
+          // Reinicia scale
+          altar.object3D.scale.set(0, 0, 0);
+    
+          // Animação GSAP
+          gsap.to(altar.object3D.scale, {
+            x: 0.4,
+            y: 0.4,
+            z: 0.4,
             duration: 1.2,
-            ease: "elastic.out(0.4,0.2)",
-            onUpdate: function() {
-              const s = this.targets()[0].t;
-              altar.object3D.scale.set(finalScale.x * s, finalScale.y * s, finalScale.z * s);
-            },
-            onComplete: function() {
-              animating = false;
-              log('animação completa');
-            }
+            ease: "elastic.out(0.4, 0.2)",
           });
         }
-      
-        function onTargetLost() {
-          // permitir novas animações
-          animating = false;
-          log('targetLost');
-          // opcional: manter visível no final ou esconder:
-          // altar.object3D.scale.set(0,0,0); altar.setAttribute('visible','false');
-        }
-      
-        anchor.addEventListener('targetFound', (e) => {
-          log('targetFound');
-          showModelFromAnchor();
-        });
-        anchor.addEventListener('targetLost', (e) => {
-          onTargetLost();
-        });
-      
-        // helpers para debug no console
-        window.__AR_safeShow = () => showModelFromAnchor();
-        window.__AR_safeHide = () => { if (altar.object3D) altar.object3D.scale.set(0,0,0); altar.setAttribute('visible','false'); };
-      
-        log('listeners prontos; esperando detecção');
-      })();
-</script>
-
+      });
+    
+      anchor.addEventListener("targetLost", () => {
+        // Permite que a animação execute de novo da próxima vez
+        animating = false;
+    
+        // Mantém visível no tamanho final
+        altar.object3D.scale.set(0.4, 0.4, 0.4);
+      });
+  </script>
 
   </a-scene>
 </body>
 </html>
-
