@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <title>Altar Virtual</title>
@@ -10,7 +10,13 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body, html { margin: 0; height: 100%; overflow: hidden; }
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      background: #000;
+    }
 
     #backBtn{
       position: fixed;
@@ -33,83 +39,93 @@
   <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
 
+  <!-- CENA AR -->
   <a-scene 
     mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
     vr-mode-ui="enabled: false"
     embedded
-    device-orientation-permission-ui="enabled: false">
+    device-orientation-permission-ui="enabled: false"
+    renderer="colorManagement: true">
 
-    <!-- Assets -->
+    <!-- ASSETS -->
     <a-assets>
       <a-asset-item id="altarModel" src="./assets/models/altar-compressed.glb"></a-asset-item>
     </a-assets>
 
-    <!-- Câmera -->
+    <!-- CÂMERA -->
     <a-camera look-controls="enabled: false"></a-camera>
 
-    <!-- ANCHOR DO GATILHO -->
+    <!-- ÂNCORA DO GATILHO -->
     <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0">
 
-      <!-- MODELO DO ALTAR -->
+      <!-- ALTAR 3D -->
       <a-gltf-model 
         id="altar"
         src="#altarModel"
         position="0 0 0"
         rotation="0 0 0"
-        scale="0.4 0.4 0.4">
+        scale="0 0 0"> <!-- Começa invisível para animar depois -->
       </a-gltf-model>
 
     </a-entity>
 
-  <script>
-    const sceneEl = document.querySelector('a-scene');
-    const anchor = document.querySelector('#altar-anchor');
-    const altar = document.querySelector('#altar');
-    
-    let alreadyPlaced = false;
-    
-    // começa invisível
-    altar.object3D.visible = false;
-    
-    sceneEl.addEventListener("targetFound", () => {
-      if (alreadyPlaced) return; // não repetir processo
-    
-      alreadyPlaced = true;
-    
-      // mostrar altar e iniciar animação suave
-      altar.setAttribute("animation__grow", {
-        property: "scale",
-        from: "0 0 0",
-        to: "0.4 0.4 0.4",
-        dur: 1000,
-        easing: "easeOutElastic"
+    <!-- SCRIPT de controle -->
+    <script>
+      const sceneEl   = document.querySelector('a-scene');
+      const anchor    = document.querySelector('#altar-anchor');
+      const altar     = document.querySelector('#altar');
+
+      let alreadyPlaced = false;
+
+      // começa invisível
+      altar.object3D.visible = false;
+
+      // QUANDO O GATILHO FOR ENCONTRADO
+      sceneEl.addEventListener("targetFound", () => {
+
+        if (alreadyPlaced) return;  // evita repetir processo
+        alreadyPlaced = true;
+
+        // Mostra altar e adiciona animação de crescimento suave
+        altar.object3D.visible = true;
+
+        altar.setAttribute("animation__grow", {
+          property: "scale",
+          from: "0 0 0",
+          to:   "0.4 0.4 0.4",
+          dur:  1200,
+          easing: "easeOutElastic"
+        });
+
+        // 1) DESLIGA O MINDAR (para câmera parar de piscar)
+        const mindarSystem = sceneEl.systems["mindar-image-system"];
+        mindarSystem.stop();    // desliga tracking
+        mindarSystem.active = false;
+
+        // remove overlay do scanner
+        const ui = document.querySelector(".mindar-ui-overlay");
+        if (ui) ui.remove();
+
+        // 2) FIXAR ALTAR (copiar posição final do anchor)
+        const pos = anchor.object3D.position.clone();
+        const rot = anchor.object3D.rotation.clone();
+        const scale = anchor.object3D.scale.clone();
+
+        // remover anchor e mover altar para a cena principal
+        anchor.parentNode.removeChild(anchor);
+
+        altar.object3D.position.copy(pos);
+        altar.object3D.rotation.copy(rot);
+        altar.object3D.scale.copy(scale);
+
+        sceneEl.object3D.add(altar.object3D);
       });
-      altar.object3D.visible = true;
-    
-      // FIXAR altar permanentemente
-      sceneEl.systems["mindar-image-system"].stop(); // para scanner
-      document.querySelector(".mindar-ui-overlay")?.remove(); // remove UI do mindar
-    
-      // copiar posição final do anchor
-      const pos = anchor.object3D.position.clone();
-      const rot = anchor.object3D.rotation.clone();
-      const scale = anchor.object3D.scale.clone();
-    
-      // remover anchor e mover altar para a cena principal
-      anchor.parentNode.removeChild(anchor);
-    
-      altar.object3D.position.copy(pos);
-      altar.object3D.rotation.copy(rot);
-      altar.object3D.scale.copy(scale);
-    
-      sceneEl.object3D.add(altar.object3D);
-    });
-    
-    // nunca esconder o altar
-    sceneEl.addEventListener("targetLost", () => {
-      // ignorado de propósito
-    });
-  </script>
+
+      // NÃO ESCONDER NUNCA MAIS
+      sceneEl.addEventListener("targetLost", () => {
+        // intencionalmente vazio
+      });
+    </script>
 
   </a-scene>
 </body>
