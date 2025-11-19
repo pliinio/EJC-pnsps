@@ -1,328 +1,105 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Altar Virtual — WebAR com smoothing (fix start)</title>
-
-  <!-- GSAP (para animações suaves) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Altar Virtual</title>
 
   <!-- A-Frame + MindAR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.2.0/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: Arial, sans-serif }
+    body, html { margin: 0; height: 100%; overflow: hidden; }
+
     #backBtn{
-      position: fixed; top: 10px; left: 10px; z-index: 9999;
-      background: rgba(0,0,0,0.6); color: white; padding: 10px 15px;
-      border-radius: 8px; border: 1px solid white; cursor: pointer; font-size: 1.05em;
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 9999;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid white;
+      cursor: pointer;
+      font-size: 1.1em;
     }
-
-    /* Overlay/Controles */
-    #controls {
-      position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; z-index:9998;
-      pointer-events: none;
-    }
-    #uiCard {
-      pointer-events: auto; background: rgba(0,0,0,0.6); color: white; padding: 18px; border-radius: 10px; text-align:center;
-      min-width: 260px;
-    }
-    #startBtn {
-      background: #2d9cdb; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-size: 1rem; cursor: pointer;
-    }
-    #msg { margin-top: 8px; font-size: 0.9rem; opacity: 0.95 }
-
-    /* Loading / error screens from MindAR can be hidden if desired */
-    .mindar-ui { display: none; }
-
-    /* Small debug console */
-    #dbg { position: fixed; right: 10px; bottom: 10px; z-index:9999; background: rgba(0,0,0,0.5); color: #fff; padding:8px; border-radius:6px; font-size:12px }
   </style>
 </head>
+
 <body>
+
+  <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
 
-  <!-- UI overlay com botão de início explícito (necessário em muitos navegadores/mobile) -->
-  <div id="controls">
-    <div id="uiCard">
-      <div><strong>Altar Virtual — AR</strong></div>
-      <div style="margin:10px 0">Para iniciar a experiência, toque em <em>Solicitar câmera</em> e permita o acesso à câmera.</div>
-      <button id="startBtn">Solicitar câmera</button>
-      <div id="msg">Ainda não iniciado</div>
-    </div>
-  </div>
-
-  <div id="dbg">status: idle</div>
-
-  <!-- Scene MindAR: autoStart DESLIGADO para evitar bloqueios por falta de user gesture -->
-  <a-scene
-    id="scene"
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiError:no; uiLoading:no; uiScanning:no"
+  <a-scene 
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
     vr-mode-ui="enabled: false"
     embedded
-    device-orientation-permission-ui="enabled: false"
-    background="color: #000000">
+    device-orientation-permission-ui="enabled: false">
 
+    <!-- Assets -->
     <a-assets>
       <a-asset-item id="altarModel" src="./assets/models/altar-compressed.glb"></a-asset-item>
     </a-assets>
 
-    <!-- Anchor: fica apenas como detector (sem filhos transformados diretamente) -->
-    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0"></a-entity>
-
-    <!-- Modelo (filho direto da cena, controlado por script) -->
-    <a-gltf-model
-      id="altar"
-      src="#altarModel"
-      visible="false"
-      position="0 0 0"
-      rotation="0 0 0"
-      scale="0.1 0.1 0.1">
-    </a-gltf-model>
-
-    <!-- Camera -->
+    <!-- Câmera -->
     <a-camera look-controls="enabled: false"></a-camera>
 
+    <!-- ANCHOR DO GATILHO -->
+    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0">
+
+      <!-- MODELO DO ALTAR -->
+      <a-gltf-model 
+        id="altar"
+        src="#altarModel"
+        position="0 0 0"
+        rotation="0 0 0"
+        scale="0.1 0.1 0.1">
+      </a-gltf-model>
+
+    </a-entity>
+
     <script>
-      // referências
-      const scene = document.querySelector('#scene');
       const anchor = document.querySelector('#altar-anchor');
       const altar = document.querySelector('#altar');
-      const startBtn = document.getElementById('startBtn');
-      const controls = document.getElementById('controls');
-      const msg = document.getElementById('msg');
-      const dbg = document.getElementById('dbg');
-
-      // Função util: log simples
-      function logDbg(s) { dbg.textContent = 'status: ' + s; }
-
-      // Iniciar MindAR (depois que o usuário clicou — gesto requerido em muitos navegadores)
-      async function startAR() {
-        try {
-          logDbg('requesting camera...');
-          msg.textContent = 'Solicitando câmera...';
-
-          // obter o sistema MindAR da cena
-          const mindarSystem = scene.systems['mindar-image-system'];
-          if (!mindarSystem) throw new Error('MindAR system não encontrado');
-
-          // start() retorna uma promessa que tenta acessar a câmera
-          await mindarSystem.start();
-
-          // esconder UI de start
-          controls.style.display = 'none';
-          logDbg('mindar started');
-          msg.textContent = 'AR iniciado — aponte para o gatilho';
-
-          // opcional: escutar evento de inicialização do tracking
-          scene.addEventListener('mindARImageTrackingInitialized', () => {
-            console.log('mindARImageTrackingInitialized');
-            logDbg('tracking initialized');
-            msg.textContent = 'Pronto para escanear';
+    
+      // Começa invisível com escala zero
+      altar.object3D.scale.set(0, 0, 0);
+    
+      let animating = false;
+    
+      anchor.addEventListener("targetFound", () => {
+    
+        // Só anima se NÃO estiver animando agora
+        if (!animating) {
+          animating = true;
+    
+          // Reinicia scale
+          altar.object3D.scale.set(0, 0, 0);
+    
+          // Animação GSAP
+          gsap.to(altar.object3D.scale, {
+            x: 0.4,
+            y: 0.4,
+            z: 0.4,
+            duration: 1.2,
+            ease: "elastic.out(0.4, 0.2)",
           });
-
-        } catch (err) {
-          console.error('falha ao iniciar MindAR:', err);
-          logDbg('erro: ' + (err && err.message || err));
-          msg.textContent = 'Erro: ' + (err && err.message || 'falha ao acessar câmera');
-
-          // sugere ação ao usuário
-          controls.style.display = 'block';
-        }
-      }
-
-      // startBtn: gesto do usuário
-      startBtn.addEventListener('click', () => {
-        // desabilitar botão visualmente e chamar start
-        startBtn.disabled = true;
-        startBtn.textContent = 'Abrindo câmera...';
-        startAR();
-      });
-
-      /* -----------------------
-          SMOOTH ANCHOR COMPONENT
-         ------------------------ */
-      AFRAME.registerComponent('smooth-anchor', {
-        schema: { stiffness: { type: 'number', default: 6.0 }, lagTimeout: { type: 'int', default: 500 } },
-        init: function () {
-          this.targetVisible = false;
-          this.animating = false;
-          this.appearScale = 0;
-
-          this.smoothPos = new THREE.Vector3();
-          this.smoothQuat = new THREE.Quaternion();
-          this.smoothScale = new THREE.Vector3(1,1,1);
-
-          this.lastWorldPos = new THREE.Vector3();
-          this.lastWorldQuat = new THREE.Quaternion();
-          this.lastWorldScale = new THREE.Vector3(1,1,1);
-
-          this.baseModelScale = new THREE.Vector3(1,1,1);
-          this.holdUntil = 0;
-
-          this.modelEl = altar;
-          this.stiffness = this.data.stiffness;
-          this.lagTimeout = this.data.lagTimeout;
-
-          this.onTargetFound = this.onTargetFound.bind(this);
-          this.onTargetLost = this.onTargetLost.bind(this);
-
-          anchor.addEventListener('targetFound', this.onTargetFound);
-          anchor.addEventListener('targetLost', this.onTargetLost);
-
-          this.modelEl.addEventListener('model-loaded', () => {
-            this.modelEl.setAttribute('visible', 'true');
-            this.baseModelScale.copy(this.modelEl.object3D.scale);
-            if (this.modelEl.parentNode && this.modelEl.parentNode !== scene) {
-              this.modelEl.parentNode.removeChild(this.modelEl);
-              scene.appendChild(this.modelEl);
-            }
-            this.modelEl.object3D.scale.set(0,0,0);
-          });
-        },
-        onTargetFound: function () {
-          this.targetVisible = true;
-          this.holdUntil = Infinity;
-          if (!this.animating) {
-            this.animating = true;
-            const proxy = { s: this.appearScale };
-            gsap.killTweensOf(proxy);
-            gsap.to(proxy, { s: 1, duration: 1.2, ease: 'elastic.out(0.6,0.4)', onUpdate: () => { this.appearScale = proxy.s; }, onComplete: () => { this.animating = false; } });
-          }
-        },
-        onTargetLost: function () {
-          anchor.object3D.updateMatrixWorld(true);
-          anchor.object3D.matrixWorld.decompose(this.lastWorldPos, this.lastWorldQuat, this.lastWorldScale);
-          this.targetVisible = false;
-          this.holdUntil = Date.now() + this.lagTimeout;
-          if (!this.animating) {
-            this.animating = true;
-            const proxy = { s: this.appearScale };
-            gsap.killTweensOf(proxy);
-            gsap.to(proxy, { s: 0, duration: 0.6, ease: 'power2.inOut', onUpdate: () => { this.appearScale = proxy.s; }, onComplete: () => { this.animating = false; } });
-          }
-        },
-        tick: function (time, timeDelta) {
-          if (!this.modelEl || !this.modelEl.object3D) return;
-          if (this.appearScale <= 0.00001 && Date.now() > this.holdUntil) { this.modelEl.object3D.visible = false; return; } else { this.modelEl.object3D.visible = true; }
-          const dt = Math.min(timeDelta / 1000, 0.1);
-          const alpha = 1 - Math.exp(-this.stiffness * dt);
-          const targetPos = new THREE.Vector3();
-          const targetQuat = new THREE.Quaternion();
-          const targetScale = new THREE.Vector3(1,1,1);
-          if (this.targetVisible) {
-            anchor.object3D.updateMatrixWorld(true);
-            anchor.object3D.matrixWorld.decompose(targetPos, targetQuat, targetScale);
-            this.lastWorldPos.copy(targetPos);
-            this.lastWorldQuat.copy(targetQuat);
-            this.lastWorldScale.copy(targetScale);
-          } else {
-            if (Date.now() <= this.holdUntil) {
-              targetPos.copy(this.lastWorldPos);
-              targetQuat.copy(this.lastWorldQuat);
-              targetScale.copy(this.lastWorldScale);
-            } else {
-              return;
-            }
-          }
-          this.smoothPos.lerp(targetPos, alpha);
-          this.smoothQuat.slerp(targetQuat, alpha);
-          this.smoothScale.lerp(targetScale, alpha);
-          this.modelEl.object3D.position.copy(this.smoothPos);
-          this.modelEl.object3D.quaternion.copy(this.smoothQuat);
-          const finalScale = new THREE.Vector3();
-          finalScale.copy(this.smoothScale).multiply(this.baseModelScale).multiplyScalar(this.appearScale);
-          const eps = 0.000001;
-          finalScale.x = Math.max(finalScale.x, eps);
-          finalScale.y = Math.max(finalScale.y, eps);
-          finalScale.z = Math.max(finalScale.z, eps);
-          this.modelEl.object3D.scale.copy(finalScale);
         }
       });
-
-      // ativa com os padrões
-      scene.setAttribute('smooth-anchor', 'stiffness:6; lagTimeout:500');
-
-      // DEBUG: se a página for aberta directamente (desktop) e você quiser já iniciar, deixar botão visível para teste
-      // opcional: você pode chamar startAR() manualmente no console.
-      <!-- DEBUG: botão e vídeo de preview para testar camera diretamente -->
-      <div id="camera-debug" style="position:fixed; left:10px; bottom:60px; z-index:99999; background:rgba(0,0,0,0.6); color:#fff; padding:10px; border-radius:8px;">
-      <div style="font-size:13px; margin-bottom:6px;">Camera debug</div>
-      <button id="dbgStart" style="padding:6px 10px;">Abrir câmera (debug)</button>
-      <button id="dbgStop" style="padding:6px 10px; margin-left:6px;">Parar</button>
-      <div style="margin-top:6px;"><small id="dbgInfo">idle</small></div>
-    </div>
-    <video id="dbgVideo" autoplay playsinline muted style="position:fixed; right:10px; top:10px; width:120px; height:160px; z-index:99998; border:2px solid rgba(255,255,255,0.12); display:none;"></video>
     
-    <script>
-      const dbgVideo = document.getElementById('dbgVideo');
-      const dbgInfo = document.getElementById('dbgInfo');
-      const dbgStart = document.getElementById('dbgStart');
-      const dbgStop = document.getElementById('dbgStop');
-      let dbgStream = null;
+      anchor.addEventListener("targetLost", () => {
+        // Permite que a animação execute de novo da próxima vez
+        animating = false;
     
-      async function listDevices() {
-        try {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          console.log('devices:', devices.filter(d => d.kind === 'videoinput'));
-          dbgInfo.textContent = 'dispositivos listados (veja console)';
-        } catch (e) {
-          console.warn('erro enumerateDevices', e);
-          dbgInfo.textContent = 'erro enumerateDevices: ' + (e.message || e);
-        }
-      }
-    
-      async function startDirectCamera() {
-        dbgInfo.textContent = 'tentando abrir câmera...';
-        // prefer rear camera
-        const constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
-        try {
-          dbgStream = await navigator.mediaDevices.getUserMedia(constraints);
-          dbgVideo.srcObject = dbgStream;
-          dbgVideo.style.display = 'block';
-          dbgInfo.textContent = 'stream ativo';
-          console.log('getUserMedia success', dbgStream);
-          // log track settings
-          const track = dbgStream.getVideoTracks()[0];
-          console.log('track settings:', track.getSettings(), 'track constraints:', track.getConstraints());
-        } catch (err) {
-          console.error('getUserMedia error:', err);
-          dbgInfo.textContent = 'erro: ' + (err.name||err.message);
-          // tenta enumerar dispositivos para entender se facingMode falhou por constraint
-          await listDevices();
-        }
-      }
-    
-      function stopDirectCamera() {
-        dbgInfo.textContent = 'parando...';
-        if (dbgStream) {
-          dbgStream.getTracks().forEach(t => t.stop());
-          dbgStream = null;
-        }
-        dbgVideo.style.display = 'none';
-        dbgInfo.textContent = 'stopped';
-      }
-    
-      dbgStart.addEventListener('click', async () => {
-        // user gesture guaranteed pelo clique
-        dbgStart.disabled = true;
-        await startDirectCamera();
-        dbgStart.disabled = false;
+        // Mantém visível no tamanho final
+        altar.object3D.scale.set(0.4, 0.4, 0.4);
       });
-      dbgStop.addEventListener('click', () => { stopDirectCamera(); });
-    
-      // auto-list devices on load (não pede permissão)
-      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
-        listDevices();
-      } else {
-        console.warn('navigator.mediaDevices não disponível');
-      }
-    </script>
+  </script>
 
   </a-scene>
 </body>
 </html>
-
