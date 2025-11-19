@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <title>Altar Virtual</title>
 
-  <!-- A-Frame + MindAR -->
+  <!-- GSAP (para animações suaves) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+  <!-- A-Frame + MindAR -->
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.2.0/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
@@ -62,74 +64,81 @@
 
     </a-entity>
 
+    <!-- ============================= -->
+    <!--       SCRIPT COMPLETO         -->
+    <!-- ============================= -->
     <script>
       const anchor = document.querySelector('#altar-anchor');
       const altar = document.querySelector('#altar');
-    
-      // Começa invisível com escala zero
+
+      /* -----------------------
+         ANIMAÇÃO APARECER (GSAP)
+      ------------------------ */
+
+      // Começa invisível
       altar.object3D.scale.set(0, 0, 0);
-    
+
       let animating = false;
-    
+
       anchor.addEventListener("targetFound", () => {
-    
-        // Só anima se NÃO estiver animando agora
         if (!animating) {
           animating = true;
-    
-          // Reinicia scale
+
+          // Reinicia o scale
           altar.object3D.scale.set(0, 0, 0);
-    
-          // Animação GSAP
+
+          // GSAP crescendo com elastic
           gsap.to(altar.object3D.scale, {
             x: 0.4,
             y: 0.4,
             z: 0.4,
             duration: 1.2,
-            ease: "elastic.out(0.4, 0.2)",
+            ease: "elastic.out(0.4, 0.2)"
           });
         }
       });
-    
+
       anchor.addEventListener("targetLost", () => {
-        // Permite que a animação execute de novo da próxima vez
+        // libera para animar de novo depois
         animating = false;
-    
-        // Mantém visível no tamanho final
         altar.object3D.scale.set(0.4, 0.4, 0.4);
-        
-      const anchor = document.querySelector('#altar-anchor');
-      const altarObj = document.querySelector('#altar').object3D;
-    
+      });
+
+
+      /* -----------------------
+         SMOOTHING (ANTI-TREMEDEIRA)
+      ------------------------ */
+
+      const altarObj = altar.object3D;
       let smoothedPos = new THREE.Vector3();
       let smoothedQuat = new THREE.Quaternion();
       let smoothedScale = new THREE.Vector3(1, 1, 1);
-    
-      const SMOOTHING = 0.15;
-    
+
+      const SMOOTHING = 0.15; // aumentar = mais suave / mais duro
+
       AFRAME.registerComponent("smooth-transform", {
         tick: function () {
           const anchorObj = anchor.object3D;
-    
+
+          // suaviza posição
           smoothedPos.lerp(anchorObj.position, SMOOTHING);
           altarObj.position.copy(smoothedPos);
-    
+
+          // suaviza rotação
           smoothedQuat.slerp(anchorObj.quaternion, SMOOTHING);
           altarObj.quaternion.copy(smoothedQuat);
-    
+
+          // suaviza escala
           smoothedScale.lerp(anchorObj.scale, SMOOTHING);
           altarObj.scale.copy(smoothedScale);
         }
       });
-      
-      altarObj.el.setAttribute("smooth-transform", "");
-  </script>
+
+      // ativa o smoothing no altar
+      altar.setAttribute("smooth-transform", "");
+    </script>
+    <!-- ============================= -->
 
   </a-scene>
 </body>
 </html>
-
-
-
-
-
