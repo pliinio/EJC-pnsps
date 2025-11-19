@@ -70,75 +70,82 @@
     <script>
       const anchor = document.querySelector('#altar-anchor');
       const altar = document.querySelector('#altar');
-
+    
       /* -----------------------
-         ANIMAÇÃO APARECER (GSAP)
+          ANIMAÇÃO APARECER (GSAP)
       ------------------------ */
-
-      // Começa invisível
+    
+      // começa invisível
       altar.object3D.scale.set(0, 0, 0);
-
+    
       let animating = false;
-
+      let targetVisible = false;
+    
       anchor.addEventListener("targetFound", () => {
+        targetVisible = true;
+    
         if (!animating) {
           animating = true;
-
-          // Reinicia o scale
+    
+          // zera o scale antes da animação
           altar.object3D.scale.set(0, 0, 0);
-
-          // GSAP crescendo com elastic
+    
           gsap.to(altar.object3D.scale, {
-            x: 0.4,
-            y: 0.4,
-            z: 0.4,
+            x: 0.4, y: 0.4, z: 0.4,
             duration: 1.2,
-            ease: "elastic.out(0.4, 0.2)"
+            ease: "elastic.out(0.4, 0.2)",
+            onComplete: () => animating = false
           });
         }
       });
-
+    
       anchor.addEventListener("targetLost", () => {
-        // libera para animar de novo depois
-        animating = false;
-        altar.object3D.scale.set(0.4, 0.4, 0.4);
+        targetVisible = false;
       });
-
-
+    
+    
       /* -----------------------
-         SMOOTHING (ANTI-TREMEDEIRA)
+          SMOOTHING REAL (ANTI TREMEDEIRA)
+          — versão PRO
+          — suaviza o ANCHOR, não o modelo
       ------------------------ */
-
-      const altarObj = altar.object3D;
-      let smoothedPos = new THREE.Vector3();
-      let smoothedQuat = new THREE.Quaternion();
-      let smoothedScale = new THREE.Vector3(1, 1, 1);
-
-      const SMOOTHING = 0.15; // aumentar = mais suave / mais duro
-
-      AFRAME.registerComponent("smooth-transform", {
+    
+      // objetivo: suavizar as transformações do anchor
+      let smoothPos = new THREE.Vector3();
+      let smoothQuat = new THREE.Quaternion();
+      let smoothScale = new THREE.Vector3(1, 1, 1);
+    
+      const stiffness = 0.35; // aumenta → modelo mais duro
+    
+      AFRAME.registerComponent("smooth-anchor", {
         tick: function () {
+          if (!targetVisible) return;
+    
           const anchorObj = anchor.object3D;
-
+    
           // suaviza posição
-          smoothedPos.lerp(anchorObj.position, SMOOTHING);
-          altarObj.position.copy(smoothedPos);
-
+          smoothPos.lerp(anchorObj.position, stiffness);
+    
           // suaviza rotação
-          smoothedQuat.slerp(anchorObj.quaternion, SMOOTHING);
-          altarObj.quaternion.copy(smoothedQuat);
-
+          smoothQuat.slerp(anchorObj.quaternion, stiffness);
+    
           // suaviza escala
-          smoothedScale.lerp(anchorObj.scale, SMOOTHING);
-          altarObj.scale.copy(smoothedScale);
+          smoothScale.lerp(anchorObj.scale, stiffness);
+    
+          // joga os valores suavizados para o MODELO
+          const altarObj = altar.object3D;
+          altarObj.position.copy(smoothPos);
+          altarObj.quaternion.copy(smoothQuat);
+          altarObj.scale.copy(smoothScale);
         }
       });
-
-      // ativa o smoothing no altar
-      altar.setAttribute("smooth-transform", "");
+    
+      // ativar smoothing REAL
+      altar.setAttribute("smooth-anchor", "");
     </script>
     <!-- ============================= -->
 
   </a-scene>
 </body>
 </html>
+
