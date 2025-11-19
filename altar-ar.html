@@ -39,53 +39,46 @@
     embedded
     device-orientation-permission-ui="enabled: false">
 
-    <!-- ASSETS -->
+    <!-- Assets -->
     <a-assets>
       <a-asset-item id="altarModel" src="./assets/models/altar-compressed.glb"></a-asset-item>
     </a-assets>
 
-    <!-- CÂMERA -->
+    <!-- Câmera -->
     <a-camera look-controls="enabled: false"></a-camera>
 
     <!-- ANCHOR DO GATILHO -->
     <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0">
 
+      <!-- MODELO DO ALTAR -->
       <a-gltf-model 
         id="altar"
         src="#altarModel"
-        scale="0 0 0"> <!-- Começa pequeno para animar -->
+        position="0 0 0"
+        rotation="0 0 0"
+        scale="0.4 0.4 0.4">
       </a-gltf-model>
 
     </a-entity>
 
     <script>
-      const sceneEl = document.querySelector("a-scene");
-      const altar = document.querySelector("#altar");
+      const sceneEl = document.querySelector('a-scene');
+      const anchor = document.querySelector('#altar-anchor');
+      const altar = document.querySelector('#altar');
 
-      // Quando reconhece o gatilho
+      // Quando reconhecer o gatilho
       sceneEl.addEventListener("targetFound", () => {
-
-        // Reinicia animação sempre que o target aparecer
-        altar.setAttribute("scale", "0 0 0");
-
-        altar.setAttribute("animation__grow", {
-          property: "scale",
-          from: "0 0 0",
-          to: "0.4 0.4 0.4",
-          dur: 900,
-          easing: "easeOutElastic"
-        });
+        altar.object3D.visible = true;
       });
 
-      // Quando perde o gatilho, some naturalmente
+      // Quando perder o gatilho → altar PERMANECE visível
       sceneEl.addEventListener("targetLost", () => {
-        altar.setAttribute("animation__shrink", {
-          property: "scale",
-          to: "0 0 0",
-          dur: 400,
-          easing: "easeInQuad"
-        });
+        // NÃO esconda o altar aqui
+        altar.object3D.visible = true;
       });
+
+      // Começa invisível até o target ser visto pela primeira vez
+      altar.object3D.visible = false;
     </script>
 
   </a-scene>
