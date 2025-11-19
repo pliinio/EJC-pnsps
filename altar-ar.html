@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Altar Virtual</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Altar Virtual — MindAR UMD (fix)</title>
 
-  <!-- GSAP (para animações suaves) -->
+  <!-- GSAP -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
   <!-- A-Frame (UMD) -->
@@ -14,205 +15,103 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
 
-
   <style>
-    body, html { margin: 0; height: 100%; overflow: hidden; }
-
-    #backBtn{
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 9999;
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 10px 15px;
-      border-radius: 8px;
-      border: 1px solid white;
-      cursor: pointer;
-      font-size: 1.1em;
-    }
-
-    /* Debug label para saber quando o model carregou */
-    #loadedLabel {
-      position: fixed;
-      right: 10px;
-      top: 10px;
-      z-index: 9999;
-      background: rgba(0,0,0,0.5);
-      color: #fff;
-      padding: 6px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-      display: none;
-    }
+    html,body{height:100%;margin:0;background:#000}
+    #backBtn{position:fixed;left:10px;top:10px;z-index:9999;padding:10px 14px;background:rgba(0,0,0,.6);color:#fff;border-radius:8px;border:1px solid #fff;cursor:pointer}
+    #dbg{position:fixed;right:10px;top:10px;z-index:9999;background:rgba(0,0,0,.5);color:#fff;padding:6px 8px;border-radius:6px;font-size:12px}
   </style>
 </head>
-
 <body>
-
-  <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
-  <div id="loadedLabel">modelo carregado</div>
+  <div id="dbg">status: idle</div>
 
-  <a-scene 
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
-    vr-mode-ui="enabled: false"
-    embedded
-    device-orientation-permission-ui="enabled: false">
+  <!-- scene: autoStart = true se quiser que abra sem gesture (porém mobile pode exigir gesture) -->
+  <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no"
+           vr-mode-ui="enabled: false"
+           embedded
+           device-orientation-permission-ui="enabled: false">
 
-    <!-- Assets -->
     <a-assets>
       <a-asset-item id="altarModel" src="./assets/models/altar-compressed.glb"></a-asset-item>
     </a-assets>
 
-    <!-- Câmera -->
     <a-camera look-controls="enabled: false"></a-camera>
 
-    <!-- ANCHOR DO GATILHO -->
+    <!-- anchor como detector -->
     <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0"></a-entity>
 
-    <!-- MODELO DO ALTAR (inicialmente dentro do anchor na sua versão, mas moveremos para scene ao carregar) -->
-    <a-gltf-model 
-      id="altar"
-      src="#altarModel"
-      position="0 0 0"
-      rotation="0 0 0"
-      scale="0.1 0.1 0.1"
-      visible="false">
-    </a-gltf-model>
+    <!-- modelo (dentro do anchor como você preferiu originalmente) -->
+    <a-gltf-model id="altar" src="#altarModel" position="0 0 0" rotation="0 0 0" scale="0.1 0.1 0.1" visible="false"></a-gltf-model>
 
     <script>
-      (function () {
+      (function(){
+        const dbg = document.getElementById('dbg');
         const anchor = document.querySelector('#altar-anchor');
         const altar = document.querySelector('#altar');
-        const scene = document.querySelector('a-scene');
-        const loadedLabel = document.getElementById('loadedLabel');
 
-        // CONFIGURAÇÃO: ative/desative smoothing
-        const enableSmoothing = true;
-        const stiffness = 8.0; // 4..10 ; menor = mais suave/lag, maior = mais rígido
+        function log(s){ dbg.textContent = 'status: ' + s; console.log('[AR]', s); }
 
-        // estado
+        if (!anchor) { log('anchor NÃO encontrado'); return; }
+        if (!altar)  { log('altar NÃO encontrado'); return; }
+
+        let modelReady = false;
         let animating = false;
-        let appearScale = 0; // multiplicador para animação de surgimento
-        let baseModelScale = new THREE.Vector3(0.1,0.1,0.1); // vai ser atualizado no model-loaded
 
-        // smoothing buffers (world-space)
-        let smoothPos = new THREE.Vector3();
-        let smoothQuat = new THREE.Quaternion();
-        let smoothScale = new THREE.Vector3(1,1,1);
-
-        // Esperar o modelo carregar antes de operar em object3D
+        // aguarda model-loaded
         altar.addEventListener('model-loaded', () => {
-          // tornar visível (vamos controlar aparição via escala)
-          altar.setAttribute('visible', 'true');
-          loadedLabel.style.display = 'block';
-
-          // salvar escala base do GLTF
-          baseModelScale.copy(altar.object3D.scale);
-
-          // mover o model para ser filho direto da cena (evita double transform)
-          if (altar.parentNode && altar.parentNode !== scene) {
-            altar.parentNode.removeChild(altar);
-            scene.appendChild(altar);
-          }
-
-          // começa invisível por escala
-          altar.object3D.scale.set(0,0,0);
-          appearScale = 0;
-
-          // inicializar smooth com a pose atual do anchor (se houver)
-          anchor.object3D.updateMatrixWorld(true);
-          anchor.object3D.matrixWorld.decompose(smoothPos, smoothQuat, smoothScale);
-          // aplicar inicialmente sem transições
-          altar.object3D.position.copy(smoothPos);
-          altar.object3D.quaternion.copy(smoothQuat);
+          modelReady = true;
+          altar.setAttribute('visible','true');   // garantir visibilidade A-Frame
+          altar.object3D.scale.set(0,0,0);        // começa escondido (GSAP anima)
+          log('model-loaded OK');
         });
 
-        // função que dispara a animação de surgimento
-        function showModel() {
-          // proteger se já estiver animando
-          gsap.killTweensOf(altar.object3D.scale);
-          gsap.killTweensOf({}); // limpador geral (segurança)
-          animating = true;
+        // se por acaso já carregou antes do listener
+        setTimeout(() => {
+          if (!modelReady && altar.object3D) {
+            modelReady = true;
+            altar.setAttribute('visible','true');
+            altar.object3D.scale.set(0,0,0);
+            log('model-ready (fallback)');
+          }
+        }, 300);
 
-          // recomecar escala para animação
-          // usar um tween no appearScale para controlar melhor (evita conflitos com smoothing)
-          const proxy = { s: appearScale };
-          gsap.to(proxy, {
-            s: 1,
+        function doShow(){
+          if (!modelReady) { log('targetFound mas modelo não pronto — aguardando'); return; }
+          if (!altar.object3D) { log('altar.object3D ausente'); return; }
+          if (animating) { log('já animando, pulando'); return; }
+
+          animating = true;
+          altar.setAttribute('visible','true');
+          altar.object3D.scale.set(0,0,0);
+          gsap.killTweensOf(altar.object3D.scale);
+          gsap.to(altar.object3D.scale, {
+            x: 0.4, y: 0.4, z: 0.4,
             duration: 1.2,
             ease: "elastic.out(0.4, 0.2)",
-            onUpdate: () => {
-              appearScale = proxy.s;
-            },
-            onComplete: () => {
-              appearScale = 1;
-              animating = false;
-            }
+            onComplete: () => { animating = false; log('animação completa'); }
           });
         }
 
-        function hideModelInstant() {
-          // quando perde o target, queremos manter o tamanho final, mas permitir próxima animação
+        function onLost(){
           animating = false;
-          appearScale = 1;
-          // opcional: você pode animar desaparecimento aqui se quiser
+          // manter visível no tamanho final (ou esconder se quiser)
+          if (altar.object3D) altar.object3D.scale.set(0.4,0.4,0.4);
+          log('target lost');
         }
 
-        // Events
-        anchor.addEventListener("targetFound", () => {
-          // não tenta animar se modelo não carregou ainda
-          if (!altar.object3D) return;
-          // se já animando, não reiniciar (evita sobrescrever tweens)
-          if (!animating) showModel();
+        anchor.addEventListener('targetFound', (e) => {
+          log('targetFound event');
+          doShow();
+        });
+        anchor.addEventListener('targetLost', (e) => {
+          onLost();
         });
 
-        anchor.addEventListener("targetLost", () => {
-          hideModelInstant();
-        });
+        // exposição útil para debug no console:
+        window.__AR_forceShow = () => doShow();
+        window.__AR_forceHide = () => { if (altar.object3D) altar.object3D.scale.set(0,0,0); altar.setAttribute('visible','false'); };
 
-        // tick loop para smoothing / aplicar scale multiplicador
-        // registramos um componente leve no scene para hook no tick
-        AFRAME.registerComponent('altar-updater', {
-          tick: function (time, timeDelta) {
-            // só prossegue quando o modelo estiver pronto
-            if (!altar.object3D) return;
-
-            // smoothing:
-            if (enableSmoothing) {
-              const dt = Math.min(timeDelta / 1000, 0.1);
-              const alpha = 1 - Math.exp(-stiffness * dt);
-
-              // ler matriz mundial do anchor e decompor
-              const targetPos = new THREE.Vector3();
-              const targetQuat = new THREE.Quaternion();
-              const targetScale = new THREE.Vector3(1,1,1);
-              anchor.object3D.updateMatrixWorld(true);
-              anchor.object3D.matrixWorld.decompose(targetPos, targetQuat, targetScale);
-
-              smoothPos.lerp(targetPos, alpha);
-              smoothQuat.slerp(targetQuat, alpha);
-              smoothScale.lerp(targetScale, alpha);
-
-              // aplicar pose (modelo está em world-space)
-              altar.object3D.position.copy(smoothPos);
-              altar.object3D.quaternion.copy(smoothQuat);
-
-              // escala final = baseModelScale * smoothScale * appearScale
-              const finalScale = new THREE.Vector3();
-              finalScale.copy(smoothScale).multiply(baseModelScale).multiplyScalar(Math.max(appearScale, 0.00001));
-              altar.object3D.scale.copy(finalScale);
-            } else {
-              // sem smoothing: apenas aplicar scale multiplicador (mantém transform do anchor)
-              const finalScale = baseModelScale.clone().multiplyScalar(Math.max(appearScale, 0.00001));
-              altar.object3D.scale.copy(finalScale);
-            }
-          }
-        });
-
-        // ativa o componente
-        scene.setAttribute('altar-updater', '');
+        log('listeners prontos — aguarde detecção do gatilho');
 
       })();
     </script>
@@ -220,5 +119,3 @@
   </a-scene>
 </body>
 </html>
-
-
