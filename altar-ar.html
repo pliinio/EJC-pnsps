@@ -1,21 +1,18 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta charset="UTF-8">
   <title>Altar Virtual</title>
 
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      width: 100%;
-      height: 100%;
-      background: black;
-    }
+  <!-- A-Frame + MindAR -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.2.0/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
 
-    #backBtn {
+  <style>
+    body, html { margin: 0; height: 100%; overflow: hidden; }
+
+    #backBtn{
       position: fixed;
       top: 10px;
       left: 10px;
@@ -26,61 +23,64 @@
       border-radius: 8px;
       border: 1px solid white;
       cursor: pointer;
+      font-size: 1.1em;
     }
   </style>
-
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-        "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
-      }
-    }
-  </script>
 </head>
 
 <body>
 
+  <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
 
-  <script type="module">
-    import * as THREE from "three";
-    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-    import { MindARThree } from "mindar-image-three";
+  <a-scene 
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
+    vr-mode-ui="enabled: false"
+    embedded
+    device-orientation-permission-ui="enabled: false">
 
-    document.addEventListener("DOMContentLoaded", async () => {
+    <!-- Assets -->
+    <a-assets>
+      <a-asset-item id="altarModel" src="./assets/models/altar-compressed.glb"></a-asset-item>
+    </a-assets>
 
-      // configuração correta
-      const mindarThree = new MindARThree({
-        container: document.body,
-        imageTargetSrc: "./targets.mind"
+    <!-- Câmera -->
+    <a-camera look-controls="enabled: false"></a-camera>
+
+    <!-- ANCHOR DO GATILHO -->
+    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0">
+
+      <!-- MODELO DO ALTAR -->
+      <a-gltf-model 
+        id="altar"
+        src="#altarModel"
+        position="0 0 0"
+        rotation="0 0 0"
+        scale="0.4 0.4 0.4">
+      </a-gltf-model>
+
+    </a-entity>
+
+    <script>
+      const sceneEl = document.querySelector('a-scene');
+      const anchor = document.querySelector('#altar-anchor');
+      const altar = document.querySelector('#altar');
+
+      // Quando reconhecer o gatilho
+      sceneEl.addEventListener("targetFound", () => {
+        altar.object3D.visible = true;
       });
 
-      const { renderer, scene, camera } = mindarThree;
-
-      // âncora do target 0
-      const anchor = mindarThree.addAnchor(0);
-
-      const loader = new GLTFLoader();
-
-      loader.load("./assets/models/altar-compressed.glb", (gltf) => {
-        const altar = gltf.scene;
-        altar.scale.set(0.5, 0.5, 0.5);
-        anchor.group.add(altar);
+      // Quando perder o gatilho → altar PERMANECE visível
+      sceneEl.addEventListener("targetLost", () => {
+        // NÃO esconda o altar aqui
+        altar.object3D.visible = true;
       });
 
-      // mantém o altar fixo após detectar
-      anchor.onTargetLost = () => {
-        anchor.group.visible = true;
-      };
+      // Começa invisível até o target ser visto pela primeira vez
+      altar.object3D.visible = false;
+    </script>
 
-      await mindarThree.start();
-
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setAnimationLoop(() => renderer.render(scene, camera));
-    });
-  </script>
-
+  </a-scene>
 </body>
 </html>
