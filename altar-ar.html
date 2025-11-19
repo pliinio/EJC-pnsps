@@ -62,32 +62,42 @@
     </a-entity>
 
     <script>
-      const sceneEl = document.querySelector('a-scene');
       const anchor = document.querySelector('#altar-anchor');
       const altar = document.querySelector('#altar');
-
-      // Quando reconhecer o gatilho
-      sceneEl.addEventListener("targetFound", () => {
-        altar.object3D.visible = true;
-        altar.setAttribute("scale", "0.1 0.1 0.1");
-        altar.setAttribute("animation__grow", {
-          property: "scale",
-          from: "0 0 0",
-          to: "0.4 0.4 0.4",
-          dur: 900,
-          easing: "easeOutElastic"
+    
+      // Começa "invisível" com escala zero
+      altar.object3D.scale.set(0, 0, 0);
+    
+      let animating = false;   // Evita reiniciar a animação toda hora
+    
+      // Quando o target é encontrado
+      anchor.addEventListener("targetFound", () => {
+        if (animating) return;  // evita animações repetidas
+        animating = true;
+    
+        // Garante que a escala começa do zero
+        altar.object3D.scale.set(0, 0, 0);
+    
+        // Animação GSAP em Three.js puro
+        gsap.to(altar.object3D.scale, {
+          x: 0.4,
+          y: 0.4,
+          z: 0.4,
+          duration: 1.2,
+          ease: "elastic.out(0.4, 0.2)"
+        });
       });
-
-      // Quando perder o gatilho → altar PERMANECE visível
-      sceneEl.addEventListener("targetLost", () => {
-        altar.object3D.visible = true;
+    
+      // Quando perde o target → mantém exibido
+      anchor.addEventListener("targetLost", () => {
+        // não reduz, não desaparece
+        // só garante o tamanho final do modelo
+        altar.object3D.scale.set(0.4, 0.4, 0.4);
       });
-
-      // Começa invisível até o target ser visto pela primeira vez
-      altar.object3D.visible = false;
     </script>
 
   </a-scene>
 </body>
 </html>
+
 
