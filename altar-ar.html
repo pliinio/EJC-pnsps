@@ -1,49 +1,116 @@
-<script>
-  const sceneEl = document.querySelector('a-scene');
-  const anchor = document.querySelector('#altar-anchor');
-  const altar = document.querySelector('#altar');
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Altar Virtual</title>
 
-  let alreadyPlaced = false;
+  <!-- A-Frame + MindAR -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.2.0/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
 
-  // começa invisível
-  altar.object3D.visible = false;
+  <style>
+    body, html { margin: 0; height: 100%; overflow: hidden; }
 
-  sceneEl.addEventListener("targetFound", () => {
-    if (alreadyPlaced) return; // não repetir processo
+    #backBtn{
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 9999;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid white;
+      cursor: pointer;
+      font-size: 1.1em;
+    }
+  </style>
+</head>
 
-    alreadyPlaced = true;
+<body>
 
-    // mostrar altar e iniciar animação suave
-    altar.setAttribute("animation__grow", {
-      property: "scale",
-      from: "0 0 0",
-      to: "0.4 0.4 0.4",
-      dur: 1000,
-      easing: "easeOutElastic"
+  <!-- BOTÃO VOLTAR -->
+  <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
+
+  <a-scene 
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
+    vr-mode-ui="enabled: false"
+    embedded
+    device-orientation-permission-ui="enabled: false">
+
+    <!-- Assets -->
+    <a-assets>
+      <a-asset-item id="altarModel" src="./assets/models/altar-compressed.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- Câmera -->
+    <a-camera look-controls="enabled: false"></a-camera>
+
+    <!-- ANCHOR DO GATILHO -->
+    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0">
+
+      <!-- MODELO DO ALTAR -->
+      <a-gltf-model 
+        id="altar"
+        src="#altarModel"
+        position="0 0 0"
+        rotation="0 0 0"
+        scale="0.4 0.4 0.4">
+      </a-gltf-model>
+
+    </a-entity>
+
+  <script>
+    const sceneEl = document.querySelector('a-scene');
+    const anchor = document.querySelector('#altar-anchor');
+    const altar = document.querySelector('#altar');
+    
+    let alreadyPlaced = false;
+    
+    // começa invisível
+    altar.object3D.visible = false;
+    
+    sceneEl.addEventListener("targetFound", () => {
+      if (alreadyPlaced) return; // não repetir processo
+    
+      alreadyPlaced = true;
+    
+      // mostrar altar e iniciar animação suave
+      altar.setAttribute("animation__grow", {
+        property: "scale",
+        from: "0 0 0",
+        to: "0.4 0.4 0.4",
+        dur: 1000,
+        easing: "easeOutElastic"
+      });
+      altar.object3D.visible = true;
+    
+      // FIXAR altar permanentemente
+      sceneEl.systems["mindar-image-system"].stop(); // para scanner
+      document.querySelector(".mindar-ui-overlay")?.remove(); // remove UI do mindar
+    
+      // copiar posição final do anchor
+      const pos = anchor.object3D.position.clone();
+      const rot = anchor.object3D.rotation.clone();
+      const scale = anchor.object3D.scale.clone();
+    
+      // remover anchor e mover altar para a cena principal
+      anchor.parentNode.removeChild(anchor);
+    
+      altar.object3D.position.copy(pos);
+      altar.object3D.rotation.copy(rot);
+      altar.object3D.scale.copy(scale);
+    
+      sceneEl.object3D.add(altar.object3D);
     });
-    altar.object3D.visible = true;
+    
+    // nunca esconder o altar
+    sceneEl.addEventListener("targetLost", () => {
+      // ignorado de propósito
+    });
+  </script>
 
-    // FIXAR altar permanentemente
-    sceneEl.systems["mindar-image-system"].stop(); // para scanner
-    document.querySelector(".mindar-ui-overlay")?.remove(); // remove UI do mindar
-
-    // copiar posição final do anchor
-    const pos = anchor.object3D.position.clone();
-    const rot = anchor.object3D.rotation.clone();
-    const scale = anchor.object3D.scale.clone();
-
-    // remover anchor e mover altar para a cena principal
-    anchor.parentNode.removeChild(anchor);
-
-    altar.object3D.position.copy(pos);
-    altar.object3D.rotation.copy(rot);
-    altar.object3D.scale.copy(scale);
-
-    sceneEl.object3D.add(altar.object3D);
-  });
-
-  // nunca esconder o altar
-  sceneEl.addEventListener("targetLost", () => {
-    // ignorado de propósito
-  });
-</script>
+  </a-scene>
+</body>
+</html>
