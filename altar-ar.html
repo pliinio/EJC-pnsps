@@ -56,7 +56,7 @@
         src="#altarModel"
         position="0 0 0"
         rotation="0 0 0"
-        scale="0.4 0.4 0.4">
+        scale="0.1 0.1 0.1">
       </a-gltf-model>
 
     </a-entity>
@@ -69,11 +69,17 @@
       // Quando reconhecer o gatilho
       sceneEl.addEventListener("targetFound", () => {
         altar.object3D.visible = true;
+        altar.setAttribute("scale", "0.1 0.1 0.1");
+        altar.setAttribute("animation__grow", {
+          property: "scale",
+          from: "0 0 0",
+          to: "0.4 0.4 0.4",
+          dur: 900,
+          easing: "easeOutElastic"
       });
 
       // Quando perder o gatilho → altar PERMANECE visível
       sceneEl.addEventListener("targetLost", () => {
-        // NÃO esconda o altar aqui
         altar.object3D.visible = true;
       });
 
@@ -84,3 +90,4 @@
   </a-scene>
 </body>
 </html>
+
