@@ -248,8 +248,81 @@
 
       // DEBUG: se a página for aberta directamente (desktop) e você quiser já iniciar, deixar botão visível para teste
       // opcional: você pode chamar startAR() manualmente no console.
+      <!-- DEBUG: botão e vídeo de preview para testar camera diretamente -->
+      <div id="camera-debug" style="position:fixed; left:10px; bottom:60px; z-index:99999; background:rgba(0,0,0,0.6); color:#fff; padding:10px; border-radius:8px;">
+      <div style="font-size:13px; margin-bottom:6px;">Camera debug</div>
+      <button id="dbgStart" style="padding:6px 10px;">Abrir câmera (debug)</button>
+      <button id="dbgStop" style="padding:6px 10px; margin-left:6px;">Parar</button>
+      <div style="margin-top:6px;"><small id="dbgInfo">idle</small></div>
+    </div>
+    <video id="dbgVideo" autoplay playsinline muted style="position:fixed; right:10px; top:10px; width:120px; height:160px; z-index:99998; border:2px solid rgba(255,255,255,0.12); display:none;"></video>
+    
+    <script>
+      const dbgVideo = document.getElementById('dbgVideo');
+      const dbgInfo = document.getElementById('dbgInfo');
+      const dbgStart = document.getElementById('dbgStart');
+      const dbgStop = document.getElementById('dbgStop');
+      let dbgStream = null;
+    
+      async function listDevices() {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          console.log('devices:', devices.filter(d => d.kind === 'videoinput'));
+          dbgInfo.textContent = 'dispositivos listados (veja console)';
+        } catch (e) {
+          console.warn('erro enumerateDevices', e);
+          dbgInfo.textContent = 'erro enumerateDevices: ' + (e.message || e);
+        }
+      }
+    
+      async function startDirectCamera() {
+        dbgInfo.textContent = 'tentando abrir câmera...';
+        // prefer rear camera
+        const constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
+        try {
+          dbgStream = await navigator.mediaDevices.getUserMedia(constraints);
+          dbgVideo.srcObject = dbgStream;
+          dbgVideo.style.display = 'block';
+          dbgInfo.textContent = 'stream ativo';
+          console.log('getUserMedia success', dbgStream);
+          // log track settings
+          const track = dbgStream.getVideoTracks()[0];
+          console.log('track settings:', track.getSettings(), 'track constraints:', track.getConstraints());
+        } catch (err) {
+          console.error('getUserMedia error:', err);
+          dbgInfo.textContent = 'erro: ' + (err.name||err.message);
+          // tenta enumerar dispositivos para entender se facingMode falhou por constraint
+          await listDevices();
+        }
+      }
+    
+      function stopDirectCamera() {
+        dbgInfo.textContent = 'parando...';
+        if (dbgStream) {
+          dbgStream.getTracks().forEach(t => t.stop());
+          dbgStream = null;
+        }
+        dbgVideo.style.display = 'none';
+        dbgInfo.textContent = 'stopped';
+      }
+    
+      dbgStart.addEventListener('click', async () => {
+        // user gesture guaranteed pelo clique
+        dbgStart.disabled = true;
+        await startDirectCamera();
+        dbgStart.disabled = false;
+      });
+      dbgStop.addEventListener('click', () => { stopDirectCamera(); });
+    
+      // auto-list devices on load (não pede permissão)
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        listDevices();
+      } else {
+        console.warn('navigator.mediaDevices não disponível');
+      }
     </script>
 
   </a-scene>
 </body>
 </html>
+
