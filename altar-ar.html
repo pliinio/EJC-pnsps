@@ -66,40 +66,44 @@
       const anchor = document.querySelector('#altar-anchor');
       const altar = document.querySelector('#altar');
     
-      // Começa "invisível" com escala zero
+      // Começa invisível com escala zero
       altar.object3D.scale.set(0, 0, 0);
     
-      let animating = false;   // Evita reiniciar a animação toda hora
+      let animating = false;
     
-      // Quando o target é encontrado
       anchor.addEventListener("targetFound", () => {
-        if (animating) return;  // evita animações repetidas
-        animating = true;
     
-        // Garante que a escala começa do zero
-        altar.object3D.scale.set(0, 0, 0);
+        // Só anima se NÃO estiver animando agora
+        if (!animating) {
+          animating = true;
     
-        // Animação GSAP em Three.js puro
-        gsap.to(altar.object3D.scale, {
-          x: 0.4,
-          y: 0.4,
-          z: 0.4,
-          duration: 1.2,
-          ease: "elastic.out(0.4, 0.2)"
-        });
+          // Reinicia scale
+          altar.object3D.scale.set(0, 0, 0);
+    
+          // Animação GSAP
+          gsap.to(altar.object3D.scale, {
+            x: 0.4,
+            y: 0.4,
+            z: 0.4,
+            duration: 1.2,
+            ease: "elastic.out(0.4, 0.2)",
+          });
+        }
       });
     
-      // Quando perde o target → mantém exibido
       anchor.addEventListener("targetLost", () => {
-        // não reduz, não desaparece
-        // só garante o tamanho final do modelo
+        // Permite que a animação execute de novo da próxima vez
+        animating = false;
+    
+        // Mantém visível no tamanho final
         altar.object3D.scale.set(0.4, 0.4, 0.4);
       });
-    </script>
+  </script>
 
   </a-scene>
 </body>
 </html>
+
 
 
 
