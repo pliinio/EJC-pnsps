@@ -34,8 +34,13 @@
   <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
 
-  <a-scene 
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" 
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind;
+                  autoStart: true;
+                  filterMinCF: 0.0005;
+                  filterBeta: 1500;
+                  warmupTolerance: 4;
+                  missTolerance: 6;"
     vr-mode-ui="enabled: false"
     embedded
     device-orientation-permission-ui="enabled: false">
@@ -49,7 +54,7 @@
     <a-camera look-controls="enabled: false"></a-camera>
 
     <!-- ANCHOR DO GATILHO -->
-    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0; interpolationFactor: 0">
+    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0;">
 
       <!-- MODELO DO ALTAR -->
       <a-gltf-model 
@@ -103,4 +108,5 @@
   </a-scene>
 </body>
 </html>
+
 
