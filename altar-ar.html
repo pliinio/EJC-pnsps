@@ -45,77 +45,140 @@
 
     <script>
       (function(){
-        const dbg = document.getElementById('dbg');
         const anchor = document.querySelector('#altar-anchor');
-        const altar = document.querySelector('#altar');
-
-        function log(s){ dbg.textContent = 'status: ' + s; console.log('[AR]', s); }
-
-        if (!anchor) { log('anchor NÃO encontrado'); return; }
-        if (!altar)  { log('altar NÃO encontrado'); return; }
-
+        const altar  = document.querySelector('#altar');
+        const dbgEl  = document.getElementById('dbg');
+      
+        function log(s){ if(dbgEl) dbgEl.textContent = 'status: ' + s; console.log('[AR]', s); }
+      
+        if (!anchor || !altar) { log('anchor/altar não encontrados'); return; }
+      
         let modelReady = false;
         let animating = false;
-
-        // aguarda model-loaded
+        // escala original definida no GLTF (capturada no model-loaded)
+        const baseModelScale = new THREE.Vector3(1,1,1);
+        const appearMultiplier = 1.0; // multiplica a escala base -> ajustar se quiser maior/menor
+      
+        // ensure object3D exists and wait model-loaded
         altar.addEventListener('model-loaded', () => {
           modelReady = true;
-          altar.setAttribute('visible','true');   // garantir visibilidade A-Frame
-          altar.object3D.scale.set(0,0,0);        // começa escondido (GSAP anima)
-          log('model-loaded OK');
+          log('model-loaded');
+          altar.setAttribute('visible', 'true');
+          // salvar a escala *original* do GLTF
+          baseModelScale.copy(altar.object3D.scale);
+          // começar escondido por escala
+          altar.object3D.scale.set(0,0,0);
         });
-
-        // se por acaso já carregou antes do listener
+      
+        // fallback se já carregou
         setTimeout(() => {
           if (!modelReady && altar.object3D) {
             modelReady = true;
             altar.setAttribute('visible','true');
+            baseModelScale.copy(altar.object3D.scale);
             altar.object3D.scale.set(0,0,0);
             log('model-ready (fallback)');
           }
         }, 300);
-
-        function doShow(){
-          if (!modelReady) { log('targetFound mas modelo não pronto — aguardando'); return; }
-          if (!altar.object3D) { log('altar.object3D ausente'); return; }
-          if (animating) { log('já animando, pulando'); return; }
-
+      
+        function safeDecomposeAnchor() {
+          // devolve {pos, quat, scale} com correções para scale=0 ou quat NaN
+          anchor.object3D.updateMatrixWorld(true);
+          const pos = new THREE.Vector3();
+          const quat = new THREE.Quaternion();
+          const scale = new THREE.Vector3();
+          anchor.object3D.matrixWorld.decompose(pos, quat, scale);
+      
+          // corrigir escala muito pequena / zero
+          const eps = 1e-6;
+          if (scale.length() < eps || !isFinite(scale.x) || !isFinite(scale.y) || !isFinite(scale.z)) {
+            scale.set(1,1,1); // ignorar escala do anchor quando inválida
+          }
+      
+          // corrigir quaternion inválida (NaN)
+          if (!isFinite(quat.x) || !isFinite(quat.y) || !isFinite(quat.z) || !isFinite(quat.w)) {
+            quat.set(0,0,0,1); // identidade
+          } else {
+            // garantir normalização
+            quat.normalize();
+          }
+      
+          return { pos, quat, scale };
+        }
+      
+        function showModelFromAnchor() {
+          if (!modelReady) { log('targetFound mas model não pronto'); return; }
+          if (animating) { log('já animando'); return; }
+      
+          // obter pose segura do anchor
+          const { pos, quat/*, scale*/ } = safeDecomposeAnchor();
+      
+          // aplicar posição/rotacao ao modelo (model é filho do scene)
+          if (altar.object3D) {
+            altar.object3D.position.copy(pos);
+            altar.object3D.quaternion.copy(quat);
+          } else {
+            log('altar.object3D ausente');
+            return;
+          }
+      
+          // animar escala: de zero -> baseModelScale * appearMultiplier
           animating = true;
-          altar.setAttribute('visible','true');
-          altar.object3D.scale.set(0,0,0);
+          const finalScale = baseModelScale.clone().multiplyScalar(appearMultiplier);
+          // garantir eps para evitar zeros
+          const minEps = 1e-6;
+          finalScale.x = Math.max(finalScale.x, minEps);
+          finalScale.y = Math.max(finalScale.y, minEps);
+          finalScale.z = Math.max(finalScale.z, minEps);
+      
+          // reset para 0 e animar
+          altar.object3D.scale.set(minEps, minEps, minEps);
+          altar.setAttribute('visible', 'true');
+      
           gsap.killTweensOf(altar.object3D.scale);
-          gsap.to(altar.object3D.scale, {
-            x: 0.4, y: 0.4, z: 0.4,
+          // animar proxy para evitar conflitos com outras escritas de escala
+          const proxy = { t: 0 };
+          gsap.to(proxy, {
+            t: 1,
             duration: 1.2,
-            ease: "elastic.out(0.4, 0.2)",
-            onComplete: () => { animating = false; log('animação completa'); }
+            ease: "elastic.out(0.4,0.2)",
+            onUpdate: function() {
+              const s = this.targets()[0].t;
+              altar.object3D.scale.set(finalScale.x * s, finalScale.y * s, finalScale.z * s);
+            },
+            onComplete: function() {
+              animating = false;
+              log('animação completa');
+            }
           });
         }
-
-        function onLost(){
+      
+        function onTargetLost() {
+          // permitir novas animações
           animating = false;
-          // manter visível no tamanho final (ou esconder se quiser)
-          if (altar.object3D) altar.object3D.scale.set(0.4,0.4,0.4);
-          log('target lost');
+          log('targetLost');
+          // opcional: manter visível no final ou esconder:
+          // altar.object3D.scale.set(0,0,0); altar.setAttribute('visible','false');
         }
-
+      
         anchor.addEventListener('targetFound', (e) => {
-          log('targetFound event');
-          doShow();
+          log('targetFound');
+          showModelFromAnchor();
         });
         anchor.addEventListener('targetLost', (e) => {
-          onLost();
+          onTargetLost();
         });
-
-        // exposição útil para debug no console:
-        window.__AR_forceShow = () => doShow();
-        window.__AR_forceHide = () => { if (altar.object3D) altar.object3D.scale.set(0,0,0); altar.setAttribute('visible','false'); };
-
-        log('listeners prontos — aguarde detecção do gatilho');
-
+      
+        // helpers para debug no console
+        window.__AR_safeShow = () => showModelFromAnchor();
+        window.__AR_safeHide = () => { if (altar.object3D) altar.object3D.scale.set(0,0,0); altar.setAttribute('visible','false'); };
+      
+        log('listeners prontos; esperando detecção');
       })();
-    </script>
+</script>
+
 
   </a-scene>
 </body>
 </html>
+
