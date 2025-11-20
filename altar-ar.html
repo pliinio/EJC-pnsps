@@ -11,7 +11,12 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    html,body { margin:0; height:100%; background:#000; }
+    body, html { 
+      margin: 0; 
+      height: 100%; 
+      overflow: hidden; 
+      font-family: 'Times New Roman', Times, serif;
+    }
 
     #backBtn{
       position: fixed;
@@ -27,43 +32,29 @@
       font-size: 1.1em;
     }
 
-    
-    #legend {
+    /* Estilo da legenda */
+    #caption {
       position: fixed;
+      bottom: 30px;
       left: 50%;
-      bottom: 36px;
-      transform: translateX(-50%) translateY(8px);
-      z-index: 9998;
-      pointer-events: auto;
-    
-      /* fundo bem sutil, sem blur nem mistura */
-      background: rgba(0,0,0,0.30);
-      -webkit-backdrop-filter: none;
-      backdrop-filter: none;
-      mix-blend-mode: normal;
-    
-      color: #fff;
-      font-family: "Times New Roman", Times, serif;
-      font-size: 18px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.06);
-    
-      /* REMOVI box-shadow que estava criando o borrão */
-      box-shadow: none;
-      opacity: 0;
-      transition: opacity 260ms ease, transform 260ms ease;
-      max-width: 92%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 12px;
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 1.3em;
       text-align: center;
+      max-width: 80%;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      z-index: 9998;
     }
-    #legend.visible {
+
+    #caption.visible {
       opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-
-    @media (max-width:420px){
-      #legend { font-size:15px; padding:8px 12px; bottom:24px; }
     }
   </style>
 </head>
@@ -73,8 +64,8 @@
   <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
 
-  <!-- legenda oculta por padrão -->
-  <div id="legend" aria-hidden="true">“Fazei com que todo o mundo conheça esta devoção”.</div>
+  <!-- LEGENDA -->
+  <div id="caption">“Fazei com que todo o mundo conheça esta devoção”.</div>
 
   <a-scene 
     mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; filterMinCF: 0.05; filterBeta: 3000; fixAnchorTransform: true;"
@@ -105,30 +96,50 @@
     </a-entity>
 
     <script>
-      //controle da legenda aqui
       const anchor = document.querySelector('#altar-anchor');
-      const legend = document.getElementById('legend');
+      const altar = document.querySelector('#altar');
+      const caption = document.querySelector('#caption');
+    
+      // Começa invisível com escala zero
+      altar.object3D.scale.set(0, 0, 0);
+    
+      let animating = false;
+    
+      anchor.addEventListener("targetFound", () => {
+    
+        // Só anima se NÃO estiver animando agora
+        if (!animating) {
+          animating = true;
+    
+          // Reinicia scale
+          altar.object3D.scale.set(0, 0, 0);
+    
+          // Animação GSAP
+          gsap.to(altar.object3D.scale, {
+            x: 0.4,
+            y: 0.4,
+            z: 0.4,
+            duration: 1.2,
+            ease: "elastic.out(0.4, 0.2)",
+          });
+        }
 
-      if (anchor && legend) {
-        anchor.addEventListener('targetFound', () => {
-          legend.classList.add('visible');
-          legend.setAttribute('aria-hidden', 'false');
-        });
-
-        anchor.addEventListener('targetLost', () => {
-          legend.classList.remove('visible');
-          legend.setAttribute('aria-hidden', 'true');
-        });
-      }
-
-      // permitir ao usuário clicar na legenda para escondê-la imediatamente
-      legend.addEventListener && legend.addEventListener('click', () => {
-        legend.classList.remove('visible');
-        legend.setAttribute('aria-hidden', 'true');
+        // Mostra a legenda
+        caption.classList.add('visible');
       });
-    </script>
+    
+      anchor.addEventListener("targetLost", () => {
+        // Permite que a animação execute de novo da próxima vez
+        animating = false;
+    
+        // Mantém visível no tamanho final
+        altar.object3D.scale.set(0.4, 0.4, 0.4);
+
+        // Esconde a legenda
+        caption.classList.remove('visible');
+      });
+  </script>
 
   </a-scene>
 </body>
 </html>
-
