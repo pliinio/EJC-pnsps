@@ -27,7 +27,7 @@
       font-size: 1.1em;
     }
 
-    /* LEGEND (apenas legenda, sem vinheta) */
+    
     #legend {
       position: fixed;
       left: 50%;
@@ -35,24 +35,32 @@
       transform: translateX(-50%) translateY(8px);
       z-index: 9998;
       pointer-events: auto;
-      background: rgba(0,0,0,0.45);
+    
+      /* fundo bem sutil, sem blur nem mistura */
+      background: rgba(0,0,0,0.30);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      mix-blend-mode: normal;
+    
       color: #fff;
       font-family: "Times New Roman", Times, serif;
       font-size: 18px;
-      padding: 10px 14px;
+      padding: 8px 12px;
       border-radius: 8px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.06);
+    
+      /* REMOVI box-shadow que estava criando o borrão */
+      box-shadow: none;
       opacity: 0;
       transition: opacity 260ms ease, transform 260ms ease;
       max-width: 92%;
       text-align: center;
     }
-
-    /* classe visível */
     #legend.visible {
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+
 
     @media (max-width:420px){
       #legend { font-size:15px; padding:8px 12px; bottom:24px; }
@@ -97,7 +105,7 @@
     </a-entity>
 
     <script>
-      // NÃO ALTEREI o comportamento do altar — apenas adiciono controle da legenda aqui
+      //controle da legenda aqui
       const anchor = document.querySelector('#altar-anchor');
       const legend = document.getElementById('legend');
 
@@ -123,3 +131,4 @@
   </a-scene>
 </body>
 </html>
+
