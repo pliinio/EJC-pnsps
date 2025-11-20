@@ -27,67 +27,35 @@
       font-size: 1.1em;
     }
 
-    /* VINHETA + LEGEND */
-    .vignette {
+    /* LEGEND (apenas legenda, sem vinheta) */
+    #legend {
       position: fixed;
-      inset: 0;
-      pointer-events: none; /* não bloqueia toque/click na cena */
+      left: 50%;
+      bottom: 36px;
+      transform: translateX(-50%) translateY(8px);
       z-index: 9998;
-      opacity: 0;
-      transition: opacity 360ms ease;
-      display: flex;
-      align-items: flex-end; /* legenda aparece embaixo */
-      justify-content: center;
-    }
-
-    .vignette.visible {
-      opacity: 1;
-      pointer-events: none;
-    }
-
-    /* O escurecimento sutil (radial) */
-    .vignette::before{
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(
-      circle at center,
-      rgba(0,0,0,0) 40%,
-      rgba(0,0,0,0.22) 100%
-      );
-      pointer-events: none;
-      opacity: 1;
-      transition: opacity 360ms ease;
-    }
-
-
-    /* Legenda estilosa, discreta */
-    .caption {
-      position: relative;
-      margin: 28px 20px;
-      padding: 10px 16px;
+      pointer-events: auto;
       background: rgba(0,0,0,0.45);
       color: #fff;
       font-family: "Times New Roman", Times, serif;
       font-size: 18px;
-      line-height: 1.2;
+      padding: 10px 14px;
       border-radius: 8px;
-      text-align: center;
-      max-width: 92%;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-      transform: translateY(6px);
-      transition: transform 360ms ease, opacity 360ms ease;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45);
       opacity: 0;
+      transition: opacity 260ms ease, transform 260ms ease;
+      max-width: 92%;
+      text-align: center;
     }
 
-    .vignette.visible .caption {
-      transform: translateY(0);
+    /* classe visível */
+    #legend.visible {
       opacity: 1;
+      transform: translateX(-50%) translateY(0);
     }
 
-    /* Responsividade: texto menor em telas pequenas */
     @media (max-width:420px){
-      .caption { font-size: 15px; padding: 8px 12px; }
+      #legend { font-size:15px; padding:8px 12px; bottom:24px; }
     }
   </style>
 </head>
@@ -97,10 +65,8 @@
   <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
 
-  <!-- Vinheta + legenda (começa oculta) -->
-  <div id="vignette" class="vignette" aria-hidden="true">
-    <div class="caption" id="caption">Oratório virtual — toque para esconder</div>
-  </div>
+  <!-- legenda oculta por padrão -->
+  <div id="legend" aria-hidden="true">“Fazei com que todo o mundo conheça esta devoção”.</div>
 
   <a-scene 
     mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; filterMinCF: 0.05; filterBeta: 3000; fixAnchorTransform: true;"
@@ -131,38 +97,29 @@
     </a-entity>
 
     <script>
-      // === seu script do altar ficou intacto; apenas usamos os eventos do anchor para mostrar a vinheta ===
+      // NÃO ALTEREI o comportamento do altar — apenas adiciono controle da legenda aqui
       const anchor = document.querySelector('#altar-anchor');
-      const vignette = document.getElementById('vignette');
-      const caption = document.getElementById('caption');
+      const legend = document.getElementById('legend');
 
-      // segurança: se algo não existir não quebra
-      if (anchor && vignette) {
+      if (anchor && legend) {
         anchor.addEventListener('targetFound', () => {
-          // mostra vinheta + legenda
-          vignette.classList.add('visible');
-          vignette.setAttribute('aria-hidden', 'false');
-          // opcional: alterar texto (exemplo)
-          caption.textContent = '“Fazei com que todo o mundo conheça esta devoção”'.;
+          legend.classList.add('visible');
+          legend.setAttribute('aria-hidden', 'false');
         });
 
         anchor.addEventListener('targetLost', () => {
-          // esconde vinheta (ainda mantém o altar)
-          vignette.classList.remove('visible');
-          vignette.setAttribute('aria-hidden', 'true');
+          legend.classList.remove('visible');
+          legend.setAttribute('aria-hidden', 'true');
         });
       }
 
-      // opcional: permitir usuário tocar na legenda para fechar imediatamente
-      caption.addEventListener && caption.addEventListener('click', (e) => {
-        vignette.classList.remove('visible');
-        vignette.setAttribute('aria-hidden', 'true');
+      // permitir ao usuário clicar na legenda para escondê-la imediatamente
+      legend.addEventListener && legend.addEventListener('click', () => {
+        legend.classList.remove('visible');
+        legend.setAttribute('aria-hidden', 'true');
       });
-
-      // NOTA: nada foi alterado no altar; usamos só os eventos targetFound/targetLost existentes
     </script>
 
   </a-scene>
 </body>
 </html>
-
