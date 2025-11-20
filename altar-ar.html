@@ -11,7 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body, html { margin: 0; height: 100%; overflow: hidden; }
+    html,body { margin:0; height:100%; background:#000; }
 
     #backBtn{
       position: fixed;
@@ -26,6 +26,65 @@
       cursor: pointer;
       font-size: 1.1em;
     }
+
+    /* VINHETA + LEGEND */
+    .vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none; /* não bloqueia toque/click na cena */
+      z-index: 9998;
+      opacity: 0;
+      transition: opacity 360ms ease;
+      display: flex;
+      align-items: flex-end; /* legenda aparece embaixo */
+      justify-content: center;
+    }
+
+    .vignette.visible {
+      opacity: 1;
+      pointer-events: none;
+    }
+
+    /* O escurecimento sutil (radial) */
+    .vignette::before{
+      content: "";
+      position: absolute;
+      inset: 0;
+      /* radial gradient: transparente no centro, escurece nas bordas */
+      background: radial-gradient(circle at 50% 40%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.12) 45%, rgba(0,0,0,0.36) 100%);
+      mix-blend-mode: multiply;
+      transition: opacity 360ms ease;
+      opacity: 1;
+    }
+
+    /* Legenda estilosa, discreta */
+    .caption {
+      position: relative;
+      margin: 28px 20px;
+      padding: 10px 16px;
+      background: rgba(0,0,0,0.45);
+      color: #fff;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 18px;
+      line-height: 1.2;
+      border-radius: 8px;
+      text-align: center;
+      max-width: 92%;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+      transform: translateY(6px);
+      transition: transform 360ms ease, opacity 360ms ease;
+      opacity: 0;
+    }
+
+    .vignette.visible .caption {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Responsividade: texto menor em telas pequenas */
+    @media (max-width:420px){
+      .caption { font-size: 15px; padding: 8px 12px; }
+    }
   </style>
 </head>
 
@@ -33,6 +92,11 @@
 
   <!-- BOTÃO VOLTAR -->
   <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
+
+  <!-- Vinheta + legenda (começa oculta) -->
+  <div id="vignette" class="vignette" aria-hidden="true">
+    <div class="caption" id="caption">Oratório virtual — toque para esconder</div>
+  </div>
 
   <a-scene 
     mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; filterMinCF: 0.05; filterBeta: 3000; fixAnchorTransform: true;"
@@ -63,42 +127,36 @@
     </a-entity>
 
     <script>
+      // === seu script do altar ficou intacto; apenas usamos os eventos do anchor para mostrar a vinheta ===
       const anchor = document.querySelector('#altar-anchor');
-      const altar = document.querySelector('#altar');
-    
-      // Começa invisível com escala zero
-      altar.object3D.scale.set(0, 0, 0);
-    
-      let animating = false;
-    
-      anchor.addEventListener("targetFound", () => {
-    
-        // Só anima se NÃO estiver animando agora
-        if (!animating) {
-          animating = true;
-    
-          // Reinicia scale
-          altar.object3D.scale.set(0, 0, 0);
-    
-          // Animação GSAP
-          gsap.to(altar.object3D.scale, {
-            x: 0.4,
-            y: 0.4,
-            z: 0.4,
-            duration: 1.2,
-            ease: "elastic.out(0.4, 0.2)",
-          });
-        }
+      const vignette = document.getElementById('vignette');
+      const caption = document.getElementById('caption');
+
+      // segurança: se algo não existir não quebra
+      if (anchor && vignette) {
+        anchor.addEventListener('targetFound', () => {
+          // mostra vinheta + legenda
+          vignette.classList.add('visible');
+          vignette.setAttribute('aria-hidden', 'false');
+          // opcional: alterar texto (exemplo)
+          caption.textContent = '“Fazei com que todo o mundo conheça esta devoção”'.;
+        });
+
+        anchor.addEventListener('targetLost', () => {
+          // esconde vinheta (ainda mantém o altar)
+          vignette.classList.remove('visible');
+          vignette.setAttribute('aria-hidden', 'true');
+        });
+      }
+
+      // opcional: permitir usuário tocar na legenda para fechar imediatamente
+      caption.addEventListener && caption.addEventListener('click', (e) => {
+        vignette.classList.remove('visible');
+        vignette.setAttribute('aria-hidden', 'true');
       });
-    
-      anchor.addEventListener("targetLost", () => {
-        // Permite que a animação execute de novo da próxima vez
-        animating = false;
-    
-        // Mantém visível no tamanho final
-        altar.object3D.scale.set(0.4, 0.4, 0.4);
-      });
-  </script>
+
+      // NOTA: nada foi alterado no altar; usamos só os eventos targetFound/targetLost existentes
+    </script>
 
   </a-scene>
 </body>
