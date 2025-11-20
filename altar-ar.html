@@ -50,12 +50,16 @@
       content: "";
       position: absolute;
       inset: 0;
-      /* radial gradient: transparente no centro, escurece nas bordas */
-      background: radial-gradient(circle at 50% 40%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.12) 45%, rgba(0,0,0,0.36) 100%);
-      mix-blend-mode: multiply;
-      transition: opacity 360ms ease;
+      background: radial-gradient(
+      circle at center,
+      rgba(0,0,0,0) 40%,
+      rgba(0,0,0,0.22) 100%
+      );
+      pointer-events: none;
       opacity: 1;
+      transition: opacity 360ms ease;
     }
+
 
     /* Legenda estilosa, discreta */
     .caption {
@@ -161,3 +165,4 @@
   </a-scene>
 </body>
 </html>
+
