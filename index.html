@@ -1,105 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Altar Virtual</title>
-
-  <!-- A-Frame + MindAR -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.2.0/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar/dist/mindar-image-aframe.prod.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menu Inicial</title>
 
   <style>
-    body, html { margin: 0; height: 100%; overflow: hidden; }
-
-    #backBtn{
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      z-index: 9999;
-      background: rgba(0,0,0,0.6);
+    body {
+      margin: 0;
+      background: #111;
       color: white;
-      padding: 10px 15px;
-      border-radius: 8px;
-      border: 1px solid white;
-      cursor: pointer;
-      font-size: 1.1em;
+      font-family: Arial;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      gap: 20px;
+      text-align: center;
     }
+    button {
+      font-size: 1.2em;
+      padding: 15px 25px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .blue { background: #2196F3; color: white; }
+    .green { background: #1DB954; color: white; }
+    .purple { background: #673AB7; color: white; }
   </style>
 </head>
 
 <body>
+  <h1>Bem-vindo ao Encontro de Jovens</h1>
 
-  <!-- BOTÃO VOLTAR -->
-  <button id="backBtn" onclick="location.href='index.html'">Voltar</button>
+  <button class="purple" onclick="location.href='prayers.html'">Seleção de Orações</button>
 
-  <a-scene 
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; filterMinCF: 0.05; filterBeta: 3000; fixAnchorTransform: true;"
-    vr-mode-ui="enabled: false"
-    embedded
-    device-orientation-permission-ui="enabled: false">
+  <button class="green" onclick="location.href='https://open.spotify.com/playlist/XXXX'">
+    Playlist Spotify
+  </button>
 
-    <!-- Assets -->
-    <a-assets>
-      <a-asset-item id="altarModel" src="./assets/models/altar-compressed.glb"></a-asset-item>
-    </a-assets>
-
-    <!-- Câmera -->
-    <a-camera look-controls="enabled: false"></a-camera>
-
-    <!-- ANCHOR DO GATILHO -->
-    <a-entity id="altar-anchor" mindar-image-target="targetIndex: 0">
-
-      <!-- MODELO DO ALTAR -->
-      <a-gltf-model 
-        id="altar"
-        src="#altarModel"
-        position="0 0 0"
-        rotation="0 0 0"
-        scale="0.1 0.1 0.1">
-      </a-gltf-model>
-
-    </a-entity>
-
-    <script>
-      const anchor = document.querySelector('#altar-anchor');
-      const altar = document.querySelector('#altar');
-    
-      // Começa invisível com escala zero
-      altar.object3D.scale.set(0, 0, 0);
-    
-      let animating = false;
-    
-      anchor.addEventListener("targetFound", () => {
-    
-        // Só anima se NÃO estiver animando agora
-        if (!animating) {
-          animating = true;
-    
-          // Reinicia scale
-          altar.object3D.scale.set(0, 0, 0);
-    
-          // Animação GSAP
-          gsap.to(altar.object3D.scale, {
-            x: 0.4,
-            y: 0.4,
-            z: 0.4,
-            duration: 1.2,
-            ease: "elastic.out(0.4, 0.2)",
-          });
-        }
-      });
-    
-      anchor.addEventListener("targetLost", () => {
-        // Permite que a animação execute de novo da próxima vez
-        animating = false;
-    
-        // Mantém visível no tamanho final
-        altar.object3D.scale.set(0.4, 0.4, 0.4);
-      });
-  </script>
-
-  </a-scene>
+  <button class="blue" onclick="location.href='altar-ar.html'">
+    Altar Virtual (RA)
+  </button>
 </body>
 </html>
