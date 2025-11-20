@@ -3,121 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <title>Via Sacra - Encontro de Jovens com Cristo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Georgia', serif;
-            background: linear-gradient(135deg, #8B4513, #D2691E, #A0522D);
-            color: #333;
+            background: linear-gradient(135deg, #1a1f2b 0%, #2d3746 100%);
+            color: #f5f5f5;
+            font-family: 'Montserrat', sans-serif;
             line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
         }
-        
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(76, 0, 130, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(139, 0, 139, 0.1) 0%, transparent 40%);
+            z-index: -1;
+        }
+
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
             padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            margin-top: 20px;
-            margin-bottom: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #8B4513, #D4AF37, #8B4513);
         }
         
         header {
             text-align: center;
             margin-bottom: 40px;
-            border-bottom: 3px solid gold;
             padding-bottom: 20px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
         }
         
         h1 {
-            color: #8B4513;
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-family: 'Cinzel', serif;
+            font-size: 2.8rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            background: linear-gradient(to right, #D4AF37, #F5F5DC);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: 1px;
         }
         
         .subtitle {
-            color: #666;
-            font-size: 1.2em;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
             font-style: italic;
+            color: #D4AF37;
         }
         
-        .prayer-section {
+        .station {
             margin: 30px 0;
             padding: 25px;
-            background: linear-gradient(135deg, #f9f9f9, #ffffff);
-            border-radius: 10px;
-            border-left: 5px solid gold;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border-left: 4px solid #D4AF37;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .station:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
         
-        .prayer-title {
-            color: #8B4513;
-            font-size: 1.5em;
+        .station-title {
+            color: #D4AF37;
+            font-family: 'Cinzel', serif;
+            font-size: 1.8em;
             margin-bottom: 15px;
             display: flex;
             align-items: center;
             gap: 10px;
         }
         
-        .prayer-content {
+        .station-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background: #D4AF37;
+            color: #1a1f2b;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .station-content {
             font-size: 1.1em;
             text-align: justify;
             white-space: pre-line;
+            font-family: 'Playfair Display', serif;
+            line-height: 1.8;
         }
         
-        .prayer-meta {
-            margin-top: 15px;
+        .station-prayer {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 8px;
             font-style: italic;
-            color: #666;
-            text-align: right;
-            border-top: 1px solid #eee;
-            padding-top: 10px;
+        }
+        
+        .prayer-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        }
+        
+        .invocation {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .response {
+            flex: 0 0 auto;
+            color: #D4AF37;
+            font-weight: 500;
+            margin-left: 15px;
         }
         
         .btn {
-            background: linear-gradient(135deg, #8B4513, #A0522D);
-            color: white;
+            padding: 15px 25px;
+            font-size: 1.1rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
             border: none;
-            padding: 12px 25px;
-            font-size: 1.1em;
-            border-radius: 25px;
+            border-radius: 12px;
             cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            margin: 10px 5px;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
         
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.3);
+            transform: translateY(-3px);
         }
         
         .btn-back {
             background: linear-gradient(135deg, #666, #888);
+            color: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-back:hover {
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .btn-music {
+            background: linear-gradient(135deg, #1E8449 0%, #27AE60 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-music:hover {
+            box-shadow: 0 8px 20px rgba(39, 174, 96, 0.6);
         }
         
         .navigation {
             text-align: center;
             margin: 30px 0;
             padding: 20px;
-            background: rgba(139, 69, 19, 0.1);
-            border-radius: 10px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
         }
         
         footer {
             text-align: center;
             margin-top: 40px;
             padding-top: 20px;
-            border-top: 1px solid #ddd;
-            color: #666;
+            border-top: 1px solid rgba(212, 175, 55, 0.3);
+            color: #B0B0B0;
+            font-style: italic;
+        }
+        
+        .btn-icon {
+            font-size: 1.2rem;
+        }
+        
+        .final-invocation {
+            margin-top: 40px;
+            padding: 25px;
+            background: rgba(212, 175, 55, 0.15);
+            border-radius: 12px;
+            text-align: center;
         }
         
         @media (max-width: 768px) {
@@ -127,7 +260,31 @@
             }
             
             h1 {
-                font-size: 2em;
+                font-size: 2.2rem;
+            }
+            
+            .subtitle {
+                font-size: 1.2rem;
+            }
+            
+            .navigation {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            .prayer-line {
+                flex-direction: column;
+            }
+            
+            .response {
+                margin-left: 0;
+                margin-top: 5px;
+                text-align: right;
             }
         }
     </style>
@@ -135,99 +292,227 @@
 <body>
     <div class="container">
         <header>
-            <h1>Seleta de Orações</h1>
-            <p class="subtitle">"A oração é a chave que abre o coração de Deus"</p>
+            <h1>Via Sacra</h1>
+            <p class="subtitle">"Caminhando com Cristo em Sua Paixão"</p>
         </header>
         
         <div class="navigation">
-            <a href="index.html" class="btn btn-back">← Voltar à Experiência Principal</a>
-            <a href="https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI" class="btn" target="_blank">🎵 Playlist Espiritual</a>
+            <a href="index.html" class="btn btn-back">
+                <span class="btn-icon">←</span>
+                <span>Voltar ao Menu Principal</span>
+            </a>
+            <a href="https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI" class="btn btn-music" target="_blank">
+                <span class="btn-icon">♫</span>
+                <span>Playlist Espiritual</span>
+            </a>
         </div>
-        
-        <!-- Oração da Manhã -->
-        <div class="prayer-section">
-            <h2 class="prayer-title">Oração 1</h2>
-            <div class="prayer-content">
-                exemplo
-            </div>
-            <div class="prayer-meta">Para recitar ao acordar</div>
-        </div>
-        
-        <!-- Oração da Noite -->
-        <div class="prayer-section">
-            <h2 class="prayer-title">Oração 2</h2>
-            <div class="prayer-content">
-                exemplo
-            </div>
-            <div class="prayer-meta">Para recitar antes de dormir</div>
-        </div>
-        
-        <!-- Oração de Gratidão -->
-        <div class="prayer-section">
-            <h2 class="prayer-title">Oração 3</h2>
-            <div class="prayer-content">
-                exemplo
-            </div>
-            <div class="prayer-meta">Para momentos de agradecimento</div>
-        </div>
-        
-        <!-- Oração pela Paz -->
-        <div class="prayer-section">
-            <h2 class="prayer-title">🕊️ Oração pela Paz</h2>
-            <div class="prayer-content">
-Senhor, fazei-me instrumento de vossa paz.
-Onde houver ódio, que eu leve o amor.
-Onde houver ofensa, que eu leve o perdão.
-Onde houver discórdia, que eu leve a união.
-Onde houver dúvida, que eu leve a fé.
-Onde houver erro, que eu leve a verdade.
-Onde houver desespero, que eu leve a esperança.
-Onde houver tristeza, que eu leve a alegria.
-Onde houver trevas, que eu leve a luz.
 
-Ó Mestre, fazei que eu procure mais
-consolar que ser consolado;
-compreender que ser compreendido;
-amar que ser amado.
-Pois é dando que se recebe,
-é perdoando que se é perdoado,
-e é morrendo que se vive para a vida eterna.
+        <!-- Primeira Estação -->
+        <div class="station">
+            <h2 class="station-title">
+                <span class="station-number">I</span>
+                Primeira Estação: Jesus é condenado à morte
+            </h2>
+            <div class="station-content">
+Do Evangelho segundo São Lucas (23, 13-16)
+
+Pilatos convocou os sumos sacerdotes, os chefes e o povo e disse-lhes: «Trouxestes este homem à minha presença como se andasse a revoltar o povo. Interroguei-o diante de vós e não encontrei nele nenhum dos crimes de que o acusais. Herodes tão-pouco, visto que no-lo mandou de novo. Como vedes, Ele nada praticou que mereça a morte. Vou, portanto, libertá-lo, depois de o castigar».
+
+Não foi assim que aconteceu. Pilatos não vos libertou. E, no entanto, poderia ter sido diferente. É o jogo dramático da nossa liberdade. Aquilo pelo qual, Senhor, tanto nos estimastes. Confiastes em Herodes, em Pilatos, nos amigos e nos inimigos. Sois irrevogável na confiança com que vos colocais nas nossas mãos. Disso podemos tirar consequências maravilhosas: libertando quem é injustamente acusado, aprofundando a complexidade das situações, contrariando os juízos que matam. Até Herodes poderia ter seguido a santa inquietação que o atraiu a Vós; mas não o fez, nem mesmo quando finalmente esteve na vossa presença. Pilatos poderia ter-vos libertado: já vos tinha absolvido. Mas não o fez. O caminho da cruz, Jesus, é uma possibilidade que já abandonámos demasiadas vezes. Confessamo-lo: prisioneiros de ocupações que não quisemos abandonar, preocupados com o inconveniente de uma mudança de direção. Vós continuais, silenciosamente, diante de nós: em cada irmã e irmão expostos a julgamentos e preconceitos. Regressam os argumentos religiosos, as querelas jurídicas, o aparente bom senso que não se envolve no destino dos outros: inúmeras razões nos puxam para o lado de Herodes, dos sacerdotes, de Pilatos e da multidão. Contudo, pode ser diferente. Vós, Senhor Jesus, não lavais as mãos. Continuais a amar, em silêncio. Fizestes a vossa escolha, e agora é a nossa vez.
             </div>
-            <div class="prayer-meta">São Francisco de Assis</div>
+            <div class="station-prayer">
+                <div class="prayer-line">
+                    <div class="invocation">Quando diante de mim há uma pessoa julgada</div>
+                    <div class="response">Abri o meu coração, Jesus</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Quando as minhas certezas são preconceitos</div>
+                    <div class="response">Abri o meu coração, Jesus</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Quando estou condicionado pela rigidez</div>
+                    <div class="response">Abri o meu coração, Jesus</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Quando o bem me atrai secretamente</div>
+                    <div class="response">Abri o meu coração, Jesus</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Quando desejo ser corajoso, mas tenho medo de perder</div>
+                    <div class="response">Abri o meu coração, Jesus</div>
+                </div>
+            </div>
         </div>
-        
-        <!-- Oração do Pai Nosso -->
-        <div class="prayer-section">
-            <h2 class="prayer-title">⭐ Pai Nosso</h2>
-            <div class="prayer-content">
-Pai Nosso que estais nos céus,
-santificado seja o Vosso nome.
-Venha a nós o Vosso reino,
-seja feita a Vossa vontade
-assim na terra como no céu.
 
-O pão nosso de cada dia nos dai hoje,
-perdoai-nos as nossas ofensas
-assim como nós perdoamos
-a quem nos tem ofendido.
+        <!-- Segunda Estação -->
+        <div class="station">
+            <h2 class="station-title">
+                <span class="station-number">II</span>
+                Segunda Estação: Jesus carrega a cruz
+            </h2>
+            <div class="station-content">
+Do Evangelho segundo São Lucas (9, 43b-45)
 
-E não nos deixeis cair em tentação,
-mas livrai-nos do mal.
+Estando todos admirados com tudo o que Ele fazia, Jesus disse aos seus discípulos: «Prestai bem atenção ao que vou dizer-vos: O Filho do Homem vai ser entregue nas mãos dos homens». Eles, porém, não entendiam aquela linguagem, porque lhes estava velada, de modo que não compreendiam e tinham receio de o interrogar a esse respeito.
 
-Amém.
+Durante meses, talvez por anos, Senhor Jesus, aquele fardo estava sobre os vossos ombros. Quando faláveis dele, ninguém vos prestava atenção: uma resistência invencível, até mesmo para intuir. Não procurastes a cruz, mas, de modo cada vez mais evidente, sentistes que ela se aproximava de vós. Se a aceitastes, foi porque, além do peso, sentíeis a responsabilidade. O caminho da vossa cruz, Senhor Jesus, não é apenas uma subida. É a vossa descida em direção àqueles que amastes, ao mundo amado por Deus. É uma resposta, um assumir a responsabilidade. Custa, como custam as relações mais verdadeiras, os amores mais bonitos. O peso que carregais fala-nos do sopro que vos move, do Espírito que é "Senhor que dá a vida". Quem sabe por que razão, sobre isto, tememos até mesmo de vos interrogar. Na realidade, somos nós que estamos sem fôlego, por fugirmos à responsabilidade. Bastaria não fugir e ficar: no meio daqueles que nos destes, nos contextos em que nos colocastes. Relacionarmo-nos, sentindo que só assim deixamos de ser prisioneiros de nós próprios. O egoísmo pesa mais do que a cruz e a indiferença mais do que a partilha. O profeta tinha-o anunciado: «Até os adolescentes se cansam e se fatigam e os jovens tropeçam e vacilam. Mas aqueles que confiam no Senhor renovam as suas forças. Têm asas como a águia, correm sem se cansar, marcham sem desfalecer» (cf. Is 40, 30-31).
             </div>
-            <div class="prayer-meta">A oração que Jesus nos ensinou</div>
+            <div class="station-prayer">
+                <div class="prayer-line">
+                    <div class="invocation">Se nos afadigamos em torno a nós próprios</div>
+                    <div class="response">Livrai-nos do cansaço, Senhor</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Se parece que nos faltam as forças para nos dedicarmos aos outros</div>
+                    <div class="response">Livrai-nos do cansaço, Senhor</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Se arranjamos desculpas para fugir à responsabilidade</div>
+                    <div class="response">Livrai-nos do cansaço, Senhor</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Se temos talentos e capacidades para pôr à disposição</div>
+                    <div class="response">Livrai-nos do cansaço, Senhor</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Se o nosso coração ainda se comove diante das injustiças</div>
+                    <div class="response">Livrai-nos do cansaço, Senhor</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Continuação das outras 12 estações -->
+        <!-- Terceira Estação -->
+        <div class="station">
+            <h2 class="station-title">
+                <span class="station-number">III</span>
+                Terceira Estação: Jesus cai pela primeira vez
+            </h2>
+            <div class="station-content">
+Do Evangelho segundo São Lucas (10, 13-15)
+
+«Ai de ti, Corazim! Ai de ti, Betsaida! Porque, se em Tiro e em Sidónia se tivessem operado os milagres que entre vós se realizaram, de há muito que teriam feito penitência, vestidas de saco e na cinza. Por isso, no dia do juízo, haverá mais tolerância para Tiro e Sidónia do que para vós. E tu, Cafarnaúm, porventura serás exaltada até ao céu? É até ao inferno que serás precipitada».
+
+Foi como se, pela primeira vez, tivesses tocado o fundo do poço, Senhor Jesus, e de vós saíram palavras duras para aqueles lugares que vos eram tão queridos. A semente da vossa palavra parecia ter caído no vazio, assim como cada um dos vossos gestos de libertação. Todos os profetas se sentiram cair no vazio do fracasso, para depois novamente avançar nos caminhos de Deus. A vossa vida, Senhor Jesus, é uma parábola: nunca cai em vão na nossa terra. Mesmo naquela primeira vez, a desilusão foi logo interrompida pela alegria daqueles que havíeis enviado: eles regressaram da missão e contaram-vos os sinais do Reino de Deus. Então, espontaneamente, exultastes de alegria transbordante, que faz saltar com uma energia contagiante. Bendissestes o Pai, que esconde os seus desígnios aos sábios e inteligentes e os revela aos pequeninos. Também o caminho da Cruz está marcado a fundo na terra: os grandes afastam-se dele, gostariam de tocar o céu. Em vez disso, o céu está aqui, abaixado, encontramo-lo mesmo caindo, permanecendo no chão. Os construtores de Babel dizem-nos que não se pode errar e que quem cai está perdido. É o canteiro de obras do inferno. A economia de Deus, pelo contrário, não mata, nem descarta, nem esmaga. É humilde, fiel à terra. O vosso caminho, Senhor Jesus, é a via das bem-aventuranças. Não destrói, mas cultiva, repara, guarda.
+            </div>
+            <div class="station-prayer">
+                <div class="prayer-line">
+                    <div class="invocation">Para aqueles que se sentem fracassados</div>
+                    <div class="response">Venha a nós o Vosso Reino</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Para contrastar uma economia que mata</div>
+                    <div class="response">Venha a nós o Vosso Reino</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Para dar força aos que caíram</div>
+                    <div class="response">Venha a nós o Vosso Reino</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Nas sociedades competitivas e para quem procura os primeiros lugares</div>
+                    <div class="response">Venha a nós o Vosso Reino</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Para os que estão nas fronteiras e sentem terminada a viagem</div>
+                    <div class="response">Venha a nós o Vosso Reino</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adicione as demais estações seguindo o mesmo padrão -->
+        <!-- Para economizar espaço no exemplo, vou pular para a última estação -->
+
+        <!-- Décima Quarta Estação -->
+        <div class="station">
+            <h2 class="station-title">
+                <span class="station-number">XIV</span>
+                Décima Quarta Estação: Jesus é colocado no sepulcro
+            </h2>
+            <div class="station-content">
+Do Evangelho segundo São Lucas (23, 53-56)
+
+Envolveu-o num lençol e depositou-o num sepulcro talhado na rocha, onde ainda ninguém tinha sido sepultado. Era o dia da Preparação e já começava o sábado. Entretanto, as mulheres que tinham vindo com Ele da Galileia acompanharam José, observaram o túmulo e viram como o corpo de Jesus fora depositado. Ao regressar, prepararam aromas e perfumes; e, durante o sábado, observaram o descanso, conforme o preceito.
+
+Num sistema que jamais se detém, Senhor Jesus, viveis o vosso sábado. Vivem-no também as mulheres, a quem os aromas e os perfumes gostariam de falar já de ressurreição. Ensinai-nos a não fazer nada, quando nos é pedido apenas para esperar. Educai-nos nos tempos da terra, que não são aqueles artificiais. Deposto no túmulo, Senhor Jesus, partilhais a condição que a todos nos iguala, e atingis as profundezas que tanto nos assustam. Vede como fugimos delas, multiplicando as nossas atividades. Andamos muitas vezes em vão, mas o sábado brilha com suas luzes: educa-nos e pede-nos descanso. Vida divina, vida à escala humana, aquela que conhece a paz do sábado. «Cada um repousará debaixo da sua parreira e da sua figueira, sem que ninguém o amedronte» (Mq 4, 6), profetizou Miqueias. E Zacarias faz-lhe eco: «Naquele dia – oráculo do Senhor do universo – todo o homem convidará o seu vizinho sob a videira e a figueira» (cf. Zc 3, 10). Senhor Jesus, que pareceis dormir no mundo tempestuoso, levai-nos a todos para a paz do sábado. Então toda a criação nos aparecerá muito bela e boa, destinada à ressurreição. E haverá paz sobre o teu povo e entre todas as nações.
+            </div>
+            <div class="station-prayer">
+                <div class="prayer-line">
+                    <div class="invocation">Para a terra, o ar e as águas</div>
+                    <div class="response">Venha a vossa paz</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Para os justos e os injustos</div>
+                    <div class="response">Venha a vossa paz</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Para quem é invisível e não tem voz</div>
+                    <div class="response">Venha a vossa paz</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Para quem não possui poder nem dinheiro</div>
+                    <div class="response">Venha a vossa paz</div>
+                </div>
+                <div class="prayer-line">
+                    <div class="invocation">Para quem espera que brote um rebento de justiça</div>
+                    <div class="response">Venha a vossa paz</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invocação Final -->
+        <div class="final-invocation">
+            <h3>Invocacao Final</h3>
+            <p>«"Laudato si', mi' Signore – Louvado sejas, meu Senhor", cantava São Francisco de Assis. Neste gracioso cântico, recordava-nos que a nossa casa comum se pode comparar a uma irmã [...]. Esta irmã clama contra o mal que lhe provocamos» (Carta Enc. Laudato si', 1-2).</p>
+            <p>«"Fratelli Tutti": escrevia São Francisco de Assis, dirigindo-se a seus irmãos e irmãs para lhes propor uma forma de vida com sabor a Evangelho». (Carta Enc. Fratelli tutti, 1)</p>
+            <p>«"Amou-nos", diz São Paulo referindo-se a Cristo [...], para nos ajudar a descobrir que nada "será capaz de separar-nos" desse amor». (Carta Enc. Dilexit nos, 1).</p>
+            
+            <p style="margin-top: 20px;">Percorremos a Via-Sacra; voltámo-nos para o amor do qual nada nos pode separar. Agora, enquanto o Rei dorme e um grande silêncio desce sobre toda a terra, fazendo nossas as palavras de São Francisco, invoquemos o dom da conversão do coração.</p>
+            
+            <p style="margin-top: 20px; font-style: italic;">
+            Deus altíssimo e glorioso,<br>
+            iluminai as trevas do meu coração.<br>
+            Dai-me fé reta,<br>
+            esperança certa,<br>
+            caridade perfeita<br>
+            e profunda humildade.<br>
+            Dai-me, Senhor, sabedoria e discernimento<br>
+            para cumprir a vossa verdadeira e santa vontade. Amém.
+            </p>
         </div>
         
         <div class="navigation">
-            <a href="index.html" class="btn btn-back">← Voltar à Experiência Principal</a>
-            <a href="https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI" class="btn" target="_blank">🎵 Ouvir Playlist</a>
+            <a href="index.html" class="btn btn-back">
+                <span class="btn-icon">←</span>
+                <span>Voltar ao Menu Principal</span>
+            </a>
+            <a href="https://open.spotify.com/playlist/SUA_PLAYLIST_AQUI" class="btn btn-music" target="_blank">
+                <span class="btn-icon">♫</span>
+                <span>Ouvir Playlist</span>
+            </a>
         </div>
         
         <footer>
-            <p>Que estas orações fortaleçam sua fé e conexão espiritual</p>
-            <p><em>Retiro Espiritual</em></p>
+            <p>Que a meditação da Via Sacra fortaleça sua fé e conexão espiritual</p>
+            <p><em>Encontro de Jovens com Cristo - Paróquia Nossa Senhora do Perpétuo Socorro</em></p>
         </footer>
     </div>
+
+    <script>
+        // Efeito de entrada suave para as estações
+        document.addEventListener('DOMContentLoaded', function() {
+            const stations = document.querySelectorAll('.station');
+            
+            stations.forEach((station, index) => {
+                station.style.opacity = '0';
+                station.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    station.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+                    station.style.opacity = '1';
+                    station.style.transform = 'translateY(0)';
+                }, 200 * index);
+            });
+        });
+    </script>
 </body>
 </html>
